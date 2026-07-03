@@ -20,10 +20,7 @@ export default async function ChipsPage() {
       <h1 className="text-3xl font-bold mb-8">AI Chip Database</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {chips?.map((chip) => (
-          <div 
-            key={chip.id} 
-            className="bg-slate-800 p-6 rounded-xl border border-slate-700 hover:border-blue-500 transition"
-          >
+          <div key={chip.id} className="bg-slate-800 p-6 rounded-xl border border-slate-700 hover:border-blue-500 transition">
             <div className="flex justify-between items-start mb-2">
               <div className="text-sm text-blue-400 font-semibold">{chip.manufacturer}</div>
               <div className="text-xs text-slate-500 bg-slate-700 px-2 py-1 rounded">{chip.category}</div>
