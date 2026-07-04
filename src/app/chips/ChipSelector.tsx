@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface Chip {
   id: string;
@@ -67,38 +68,51 @@ export default function ChipSelector({ chips }: { chips: Chip[] }) {
           return (
             <div 
               key={chip.id} 
-              onClick={() => toggleSelect(chip.id)}
-              className={`relative p-6 rounded-xl border-2 cursor-pointer transition-all ${
+              className={`relative rounded-xl border-2 transition-all ${
                 isSelected 
                   ? 'bg-slate-900 border-emerald-500 shadow-lg shadow-emerald-500/20' 
                   : 'bg-slate-950 border-slate-800 hover:border-slate-500'
               }`}
             >
-              {/* 选中勾选标记 */}
-              {isSelected && (
-                <div className="absolute top-4 right-4 w-7 h-7 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg">
+              {/* 选择勾选按钮 */}
+              <div 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleSelect(chip.id);
+                }}
+                className={`absolute top-4 right-4 w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition z-10 border-2 ${
+                  isSelected 
+                    ? 'bg-emerald-500 border-emerald-500' 
+                    : 'bg-slate-900 border-slate-600 hover:border-emerald-500'
+                }`}
+              >
+                {isSelected && (
                   <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                   </svg>
+                )}
+              </div>
+
+              {/* 卡片主体点击跳转详情 */}
+              <Link href={`/chips/${chip.id}`} className="block p-6">
+                <div className="flex justify-between items-start mb-3 pr-10">
+                  <div className="text-sm text-emerald-400 font-bold tracking-wide uppercase">{chip.manufacturer}</div>
+                  <div className="text-xs text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-800">{chip.category}</div>
                 </div>
-              )}
-              
-              <div className="flex justify-between items-start mb-3 pr-10">
-                <div className="text-sm text-emerald-400 font-bold tracking-wide uppercase">{chip.manufacturer}</div>
-                <div className="text-xs text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-800">{chip.category}</div>
-              </div>
-              
-              <h2 className={`text-xl font-bold mb-4 ${isSelected ? 'text-emerald-300' : 'text-white'}`}>
-                {chip.name}
-              </h2>
-              
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="text-slate-500">VRAM: <span className="text-slate-200 font-medium">{chip.vram_gb}GB</span></div>
-                <div className="text-slate-500">TDP: <span className="text-slate-200 font-medium">{chip.tdp_watt}W</span></div>
-                <div className="text-slate-500">FP16: <span className="text-slate-200 font-medium">{chip.fp16_tflops} TFLOPS</span></div>
-                <div className="text-slate-500">FP32: <span className="text-slate-200 font-medium">{chip.fp32_tflops} TFLOPS</span></div>
-                <div className="col-span-2 text-slate-500">Price: <span className="text-emerald-400 font-bold">${chip.price_usd?.toLocaleString()}</span></div>
-              </div>
+                
+                <h2 className={`text-xl font-bold mb-4 ${isSelected ? 'text-emerald-300' : 'text-white'}`}>
+                  {chip.name}
+                </h2>
+                
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="text-slate-500">VRAM: <span className="text-slate-200 font-medium">{chip.vram_gb}GB</span></div>
+                  <div className="text-slate-500">TDP: <span className="text-slate-200 font-medium">{chip.tdp_watt}W</span></div>
+                  <div className="text-slate-500">FP16: <span className="text-slate-200 font-medium">{chip.fp16_tflops} TFLOPS</span></div>
+                  <div className="text-slate-500">FP32: <span className="text-slate-200 font-medium">{chip.fp32_tflops} TFLOPS</span></div>
+                  <div className="col-span-2 text-slate-500">Price: <span className="text-emerald-400 font-bold">${chip.price_usd?.toLocaleString()}</span></div>
+                </div>
+              </Link>
             </div>
           );
         })}
