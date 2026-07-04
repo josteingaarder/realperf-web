@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import ChipSelector from './ChipSelector';
 
 export default async function ChipsPage() {
   const { data: chips, error } = await supabase
@@ -7,11 +8,10 @@ export default async function ChipsPage() {
     .select('*')
     .order('fp16_tflops', { ascending: false });
 
-  if (error) {
+  if (error || !chips) {
     return (
-      <main className="min-h-screen bg-slate-900 text-white p-8">
+      <main className="min-h-screen bg-black text-white p-8">
         <h1 className="text-3xl font-bold">Error loading chips</h1>
-        <p className="text-slate-400">{error.message}</p>
       </main>
     );
   }
@@ -53,30 +53,14 @@ export default async function ChipsPage() {
         </div>
       </nav>
 
-      {/* 内容 */}
       <div className="p-8 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">AI Chip Database</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {chips?.map((chip) => (
-            <div 
-              key={chip.id} 
-              className="bg-slate-950 p-6 rounded-xl border border-slate-800 hover:border-emerald-500/50 transition group"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div className="text-sm text-emerald-400 font-semibold">{chip.manufacturer}</div>
-                <div className="text-xs text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-800">{chip.category}</div>
-              </div>
-              <h2 className="text-xl font-bold mb-4 text-white group-hover:text-emerald-400 transition">{chip.name}</h2>
-              <div className="grid grid-cols-2 gap-3 text-sm text-slate-400">
-                <div>VRAM: <span className="text-slate-200">{chip.vram_gb}GB</span></div>
-                <div>TDP: <span className="text-slate-200">{chip.tdp_watt}W</span></div>
-                <div>FP16: <span className="text-slate-200">{chip.fp16_tflops} TFLOPS</span></div>
-                <div>FP32: <span className="text-slate-200">{chip.fp32_tflops} TFLOPS</span></div>
-                <div className="col-span-2">Price: <span className="text-emerald-400">${chip.price_usd?.toLocaleString()}</span></div>
-              </div>
-            </div>
-          ))}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">AI Chip Database</h1>
+            <p className="text-sm text-slate-500 mt-1">点击卡片选择芯片，最多 4 款</p>
+          </div>
         </div>
+        <ChipSelector chips={chips} />
       </div>
     </main>
   );
