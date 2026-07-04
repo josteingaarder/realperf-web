@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import ReactECharts from 'echarts-for-react';
 
 interface Chip {
   id: string;
@@ -69,6 +70,107 @@ export default function CompareContent() {
     );
   }
 
+  // ECharts 配置：FP16 算力柱状图
+  const chartOption = {
+    backgroundColor: 'transparent',
+    title: {
+      text: 'FP16 Performance Comparison',
+      left: 'center',
+      textStyle: { color: '#94a3b8', fontSize: 16, fontWeight: 'normal' }
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: '#0f172a',
+      borderColor: '#334155',
+      textStyle: { color: '#e2e8f0' }
+    },
+    grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: chips.map(c => c.name),
+      axisLine: { lineStyle: { color: '#334155' } },
+      axisLabel: { color: '#94a3b8', rotate: 30, fontSize: 11 }
+    },
+    yAxis: {
+      type: 'value',
+      name: 'TFLOPS',
+      nameTextStyle: { color: '#64748b' },
+      axisLine: { show: false },
+      splitLine: { lineStyle: { color: '#1e293b' } },
+      axisLabel: { color: '#64748b' }
+    },
+    series: [{
+      name: 'FP16 TFLOPS',
+      type: 'bar',
+      data: chips.map(c => c.fp16_tflops),
+      itemStyle: {
+        color: '#10b981',
+        borderRadius: [6, 6, 0, 0]
+      },
+      barWidth: '40%',
+      label: {
+        show: true,
+        position: 'top',
+        color: '#34d399',
+        fontSize: 12,
+        formatter: '{c}'
+      }
+    }]
+  };
+
+  // 性价比图表：TFLOPS / $
+  const pricePerfOption = {
+    backgroundColor: 'transparent',
+    title: {
+      text: 'Performance per Dollar',
+      left: 'center',
+      textStyle: { color: '#94a3b8', fontSize: 16, fontWeight: 'normal' }
+    },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#0f172a',
+      borderColor: '#334155',
+      textStyle: { color: '#e2e8f0' },
+      formatter: (params: any) => {
+        const chip = chips[params[0].dataIndex];
+        return `${chip.name}<br/>${chip.fp16_tflops} TFLOPS / $${chip.price_usd?.toLocaleString()}<br/>Ratio: ${params[0].value} TFLOPS/$`;
+      }
+    },
+    grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: chips.map(c => c.name),
+      axisLine: { lineStyle: { color: '#334155' } },
+      axisLabel: { color: '#94a3b8', rotate: 30, fontSize: 11 }
+    },
+    yAxis: {
+      type: 'value',
+      name: 'TFLOPS / $',
+      nameTextStyle: { color: '#64748b' },
+      axisLine: { show: false },
+      splitLine: { lineStyle: { color: '#1e293b' } },
+      axisLabel: { color: '#64748b' }
+    },
+    series: [{
+      name: 'Perf/$',
+      type: 'bar',
+      data: chips.map(c => c.price_usd ? +(c.fp16_tflops / c.price_usd).toFixed(3) : 0),
+      itemStyle: {
+        color: '#06b6d4',
+        borderRadius: [6, 6, 0, 0]
+      },
+      barWidth: '40%',
+      label: {
+        show: true,
+        position: 'top',
+        color: '#22d3ee',
+        fontSize: 12,
+        formatter: (p: any) => p.value
+      }
+    }]
+  };
+
   const attributes = [
     { key: 'manufacturer', label: 'Manufacturer' },
     { key: 'category', label: 'Category' },
@@ -104,6 +206,17 @@ export default function CompareContent() {
         <h1 className="text-3xl font-bold mb-2">Chip Comparison</h1>
         <p className="text-slate-500 mb-8">并排对比各款 AI 加速器的核心参数</p>
 
+        {/* 图表区域 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-6">
+            <ReactECharts option={chartOption} style={{ height: '320px' }} />
+          </div>
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-6">
+            <ReactECharts option={pricePerfOption} style={{ height: '320px' }} />
+          </div>
+        </div>
+
+        {/* 对比表格 */}
         <div className="overflow-x-auto rounded-xl border border-slate-800">
           <table className="w-full border-collapse">
             <thead>
