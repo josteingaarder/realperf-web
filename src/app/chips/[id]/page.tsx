@@ -2,7 +2,6 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 
 export default async function ChipDetailPage(props: any) {
-  // Next.js 16: params 是 Promise
   const params = await props.params;
   const id = params?.id;
   
@@ -28,13 +27,18 @@ export default async function ChipDetailPage(props: any) {
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Chip not found</h1>
-          <p className="text-slate-500 mb-2">ID: {id}</p>
-          <p className="text-slate-500 mb-4">Error: {error?.message || 'No data'}</p>
           <Link href="/chips" className="text-emerald-400 hover:underline">返回芯片列表</Link>
         </div>
       </main>
     );
   }
+
+  // 查询 benchmark 数据
+  const { data: benchmarks } = await supabase
+    .from('benchmarks')
+    .select('*')
+    .eq('chip_id', id)
+    .order('benchmark_name');
 
   const perfPerDollar = chip.fp16_tflops && chip.price_usd 
     ? (chip.fp16_tflops / chip.price_usd).toFixed(2) 
@@ -74,6 +78,7 @@ export default async function ChipDetailPage(props: any) {
       </nav>
 
       <div className="max-w-5xl mx-auto px-6 py-12">
+        {/* 头部 */}
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-4">
             <span className="text-sm font-bold text-emerald-400 tracking-wide uppercase">{chip.manufacturer}</span>
@@ -88,6 +93,7 @@ export default async function ChipDetailPage(props: any) {
           </p>
         </div>
 
+        {/* 核心指标 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
           <div className="bg-slate-950 border border-slate-800 rounded-xl p-6">
             <div className="text-sm text-slate-500 mb-2">FP16 Performance</div>
@@ -106,6 +112,7 @@ export default async function ChipDetailPage(props: any) {
           </div>
         </div>
 
+        {/* 性价比 */}
         {perfPerDollar && (
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6 mb-12">
             <div className="flex items-center justify-between">
@@ -121,7 +128,33 @@ export default async function ChipDetailPage(props: any) {
           </div>
         )}
 
-        <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+        {/* Benchmark 数据 */}
+        {benchmarks && benchmarks.length > 0 && (
+          <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden mb-12">
+            <div className="px-6 py-4 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Benchmark Results</h2>
+              <span className="text-xs text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-800">{benchmarks.length} tests</span>
+            </div>
+            <div className="divide-y divide-slate-800">
+              {benchmarks.map((b) => (
+                <div key={b.id} className="flex items-center justify-between px-6 py-4 hover:bg-slate-900/30 transition">
+                  <div>
+                    <div className="text-slate-200 font-medium text-sm">{b.benchmark_name}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{b.metric_name}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-emerald-400 font-bold text-lg">
+                      {Number(b.score).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 规格参数 */}
+        <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden mb-12">
           <div className="px-6 py-4 border-b border-slate-800 bg-slate-900/50">
             <h2 className="text-lg font-semibold">Specifications</h2>
           </div>
@@ -135,7 +168,8 @@ export default async function ChipDetailPage(props: any) {
           </div>
         </div>
 
-        <div className="mt-10 flex items-center gap-4">
+        {/* 底部操作 */}
+        <div className="flex items-center gap-4">
           <Link 
             href="/chips"
             className="px-6 py-3 bg-slate-900 border border-slate-700 text-white rounded-full hover:border-emerald-500 transition font-medium"
