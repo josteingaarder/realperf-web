@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import ChipSelector from './ChipSelector';
+import ChipFilter from './ChipFilter';
 
 export default async function ChipsPage() {
   const { data: chips, error } = await supabase
@@ -54,13 +54,12 @@ export default async function ChipsPage() {
       </nav>
 
       <div className="p-8 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">AI Chip Database</h1>
-            <p className="text-sm text-slate-500 mt-1">点击卡片选择芯片，最多 4 款</p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">AI Chip Database</h1>
+          <p className="text-sm text-slate-500 mt-1">Search, filter, and compare AI accelerators</p>
         </div>
-        <ChipSelector chips={chips} />
+        
+        <ChipFilter chips={chips} />
       </div>
     </main>
   );

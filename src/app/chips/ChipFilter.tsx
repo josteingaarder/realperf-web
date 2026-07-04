@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 
 interface Chip {
@@ -16,17 +15,39 @@ interface Chip {
   price_usd: number;
 }
 
-export default function ChipSelector({ chips }: { chips: Chip[] }) {
+export default function ChipFilter({ chips }: { chips: Chip[] }) {
+  const [search, setSearch] = useState('');
+  const [manufacturer, setManufacturer] = useState('All');
+  const [category, setCategory] = useState('All');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const router = useRouter();
+
+  // 提取唯一厂商和类别
+  const manufacturers = useMemo(() => 
+    ['All', ...Array.from(new Set(chips.map(c => c.manufacturer))).sort()],
+    [chips]
+  );
+  const categories = useMemo(() => 
+    ['All', ...Array.from(new Set(chips.map(c => c.category))).sort()],
+    [chips]
+  );
+
+  // 筛选逻辑
+  const filtered = useMemo(() => {
+    return chips.filter(chip => {
+      const matchSearch = search === '' || 
+        chip.name.toLowerCase().includes(search.toLowerCase()) ||
+        chip.manufacturer.toLowerCase().includes(search.toLowerCase());
+      const matchMfr = manufacturer === 'All' || chip.manufacturer === manufacturer;
+      const matchCat = category === 'All' || chip.category === category;
+      return matchSearch && matchMfr && matchCat;
+    });
+  }, [chips, search, manufacturer, category]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
-      if (prev.includes(id)) {
-        return prev.filter(i => i !== id);
-      }
+      if (prev.includes(id)) return prev.filter(i => i !== id);
       if (prev.length >= 4) {
-        window.alert('最多选择 4 款芯片对比');
+        alert('最多选择 4 款芯片对比');
         return prev;
       }
       return [...prev, id];
@@ -35,14 +56,57 @@ export default function ChipSelector({ chips }: { chips: Chip[] }) {
 
   const handleCompare = () => {
     if (selectedIds.length < 2) {
-      window.alert('请至少选择 2 款芯片');
+      alert('请至少选择 2 款芯片');
       return;
     }
-    router.push(`/compare?ids=${selectedIds.join(',')}`);
+    window.location.href = `/compare?ids=${selectedIds.join(',')}`;
   };
 
   return (
     <div>
+      {/* 筛选栏 */}
+      <div className="mb-8 space-y-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* 搜索框 */}
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search by name or manufacturer..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+            />
+          </div>
+
+          {/* 厂商筛选 */}
+          <select
+            value={manufacturer}
+            onChange={(e) => setManufacturer(e.target.value)}
+            className="px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition appearance-none cursor-pointer min-w-[140px]"
+          >
+            {manufacturers.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+
+          {/* 类别筛选 */}
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition appearance-none cursor-pointer min-w-[120px]"
+          >
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+
+        {/* 结果统计 */}
+        <div className="text-sm text-slate-500">
+          Showing <span className="text-emerald-400 font-medium">{filtered.length}</span> of {chips.length} chips
+          {search && <span className="ml-2">for "<span className="text-slate-300">{search}</span>"</span>}
+        </div>
+      </div>
+
       {/* 底部浮动对比栏 */}
       {selectedIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 border-2 border-emerald-500 rounded-full px-6 py-3 flex items-center gap-4 shadow-2xl shadow-emerald-500/20">
@@ -62,8 +126,9 @@ export default function ChipSelector({ chips }: { chips: Chip[] }) {
         </div>
       )}
 
+      {/* 芯片网格 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-24">
-        {chips.map((chip) => {
+        {filtered.map((chip) => {
           const isSelected = selectedIds.includes(chip.id);
           return (
             <div 
@@ -75,13 +140,13 @@ export default function ChipSelector({ chips }: { chips: Chip[] }) {
               }`}
             >
               {/* 选择勾选按钮 */}
-              <div 
+              <button
+                type="button"
                 onClick={(e) => {
-                  e.preventDefault();
                   e.stopPropagation();
                   toggleSelect(chip.id);
                 }}
-                className={`absolute top-4 right-4 w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition z-10 border-2 ${
+                className={`absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition z-20 border-2 ${
                   isSelected 
                     ? 'bg-emerald-500 border-emerald-500' 
                     : 'bg-slate-900 border-slate-600 hover:border-emerald-500'
@@ -92,9 +157,9 @@ export default function ChipSelector({ chips }: { chips: Chip[] }) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                   </svg>
                 )}
-              </div>
+              </button>
 
-              {/* 卡片主体点击跳转详情 */}
+              {/* 卡片主体跳转详情 */}
               <Link href={`/chips/${chip.id}`} className="block p-6">
                 <div className="flex justify-between items-start mb-3 pr-10">
                   <div className="text-sm text-emerald-400 font-bold tracking-wide uppercase">{chip.manufacturer}</div>
@@ -117,6 +182,14 @@ export default function ChipSelector({ chips }: { chips: Chip[] }) {
           );
         })}
       </div>
+
+      {/* 无结果提示 */}
+      {filtered.length === 0 && (
+        <div className="text-center py-20">
+          <div className="text-slate-500 text-lg mb-2">No chips found</div>
+          <div className="text-slate-600 text-sm">Try adjusting your search or filters</div>
+        </div>
+      )}
     </div>
   );
 }
