@@ -4,9 +4,11 @@ import Link from 'next/link';
 export default async function ComparePage({
   searchParams,
 }: {
-  searchParams: { ids?: string };
+  searchParams: Promise<{ ids?: string }>;
 }) {
-  const ids = searchParams.ids?.split(',').filter(Boolean) || [];
+  // Next.js 16: searchParams 是 Promise，需要 await
+  const params = await searchParams;
+  const ids = params.ids?.split(',').filter(Boolean) || [];
   
   if (ids.length < 2) {
     return (
