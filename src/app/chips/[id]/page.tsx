@@ -1,0 +1,155 @@
+import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
+
+export default async function ChipDetailPage(props: any) {
+  // Next.js 16: params 是 Promise
+  const params = await props.params;
+  const id = params?.id;
+  
+  if (!id) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Missing chip ID</h1>
+          <Link href="/chips" className="text-emerald-400 hover:underline">返回芯片列表</Link>
+        </div>
+      </main>
+    );
+  }
+
+  const { data: chip, error } = await supabase
+    .from('chips')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !chip) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Chip not found</h1>
+          <p className="text-slate-500 mb-2">ID: {id}</p>
+          <p className="text-slate-500 mb-4">Error: {error?.message || 'No data'}</p>
+          <Link href="/chips" className="text-emerald-400 hover:underline">返回芯片列表</Link>
+        </div>
+      </main>
+    );
+  }
+
+  const perfPerDollar = chip.fp16_tflops && chip.price_usd 
+    ? (chip.fp16_tflops / chip.price_usd).toFixed(2) 
+    : null;
+
+  const specs = [
+    { label: 'Manufacturer', value: chip.manufacturer },
+    { label: 'Category', value: chip.category },
+    { label: 'Architecture', value: chip.architecture || '—' },
+    { label: 'VRAM', value: chip.vram_gb ? `${chip.vram_gb} GB` : '—' },
+    { label: 'VRAM Type', value: chip.vram_type || '—' },
+    { label: 'TDP', value: chip.tdp_watt ? `${chip.tdp_watt} W` : '—' },
+    { label: 'FP16 (Dense)', value: chip.fp16_tflops ? `${chip.fp16_tflops} TFLOPS` : '—' },
+    { label: 'FP32 (Dense)', value: chip.fp32_tflops ? `${chip.fp32_tflops} TFLOPS` : '—' },
+    { label: 'Release Date', value: chip.release_date || '—' },
+    { label: 'Price (USD)', value: chip.price_usd ? `$${chip.price_usd.toLocaleString()}` : '—' },
+  ];
+
+  return (
+    <main className="min-h-screen bg-black text-white">
+      <nav className="sticky top-0 z-50 bg-black/50 backdrop-blur-xl border-b border-slate-800">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+              </svg>
+            </div>
+            <span className="text-xl font-bold text-white tracking-tight">
+              RealPerf<span className="text-emerald-400">.ai</span>
+            </span>
+          </Link>
+          <Link href="/chips" className="text-sm font-medium text-slate-400 hover:text-white transition">
+            ← Back to List
+          </Link>
+        </div>
+      </nav>
+
+      <div className="max-w-5xl mx-auto px-6 py-12">
+        <div className="mb-10">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-sm font-bold text-emerald-400 tracking-wide uppercase">{chip.manufacturer}</span>
+            <span className="text-xs text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-800">{chip.category}</span>
+          </div>
+          <h1 className="text-5xl font-bold mb-4">{chip.name}</h1>
+          <p className="text-slate-400 text-lg max-w-2xl">
+            {chip.architecture 
+              ? `Based on ${chip.architecture} architecture. ${chip.vram_gb}GB ${chip.vram_type || 'memory'} with ${chip.tdp_watt}W TDP.`
+              : 'Detailed specifications and benchmark data for this AI accelerator.'
+            }
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-6">
+            <div className="text-sm text-slate-500 mb-2">FP16 Performance</div>
+            <div className="text-3xl font-bold text-white">{chip.fp16_tflops || '—'}</div>
+            <div className="text-sm text-slate-400 mt-1">TFLOPS</div>
+          </div>
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-6">
+            <div className="text-sm text-slate-500 mb-2">Memory Capacity</div>
+            <div className="text-3xl font-bold text-white">{chip.vram_gb || '—'}</div>
+            <div className="text-sm text-slate-400 mt-1">GB {chip.vram_type || ''}</div>
+          </div>
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-6">
+            <div className="text-sm text-slate-500 mb-2">Power Draw</div>
+            <div className="text-3xl font-bold text-white">{chip.tdp_watt || '—'}</div>
+            <div className="text-sm text-slate-400 mt-1">Watts TDP</div>
+          </div>
+        </div>
+
+        {perfPerDollar && (
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6 mb-12">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-emerald-400 mb-1">Performance per Dollar</div>
+                <div className="text-2xl font-bold text-emerald-300">{perfPerDollar} TFLOPS / $</div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-slate-500">Based on list price</div>
+                <div className="text-xs text-slate-600">Subject to market fluctuation</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-800 bg-slate-900/50">
+            <h2 className="text-lg font-semibold">Specifications</h2>
+          </div>
+          <div className="divide-y divide-slate-800">
+            {specs.map((spec) => (
+              <div key={spec.label} className="flex items-center justify-between px-6 py-4 hover:bg-slate-900/30 transition">
+                <span className="text-slate-400 text-sm">{spec.label}</span>
+                <span className="text-slate-200 font-medium">{spec.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-10 flex items-center gap-4">
+          <Link 
+            href="/chips"
+            className="px-6 py-3 bg-slate-900 border border-slate-700 text-white rounded-full hover:border-emerald-500 transition font-medium"
+          >
+            ← Back to Database
+          </Link>
+          <Link 
+            href={`/compare?ids=${chip.id}`}
+            className="px-6 py-3 bg-emerald-500 text-black rounded-full hover:bg-emerald-400 transition font-bold"
+          >
+            Compare with Others
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+}
