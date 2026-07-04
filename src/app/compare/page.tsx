@@ -1,15 +1,52 @@
-import { supabase } from '@/lib/supabase';
-import Link from 'next/link';
+'use client';
 
-export default async function ComparePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ ids?: string }>;
-}) {
-  // Next.js 16: searchParams 是 Promise，需要 await
-  const params = await searchParams;
-  const ids = params.ids?.split(',').filter(Boolean) || [];
-  
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
+
+interface Chip {
+  id: string;
+  name: string;
+  manufacturer: string;
+  category: string;
+  architecture: string;
+  vram_gb: number;
+  tdp_watt: number;
+  fp16_tflops: number;
+  fp32_tflops: number;
+  price_usd: number;
+}
+
+export default function ComparePage() {
+  const searchParams = useSearchParams();
+  const ids = searchParams.get('ids')?.split(',').filter(Boolean) || [];
+  const [chips, setChips] = useState<Chip[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (ids.length >= 2) {
+      supabase
+        .from('chips')
+        .select('*')
+        .in('id', ids)
+        .then(({ data }) => {
+          setChips(data || []);
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
+  }, [ids.join(',')]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-slate-500">Loading comparison data...</div>
+      </main>
+    );
+  }
+
   if (ids.length < 2) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -20,11 +57,6 @@ export default async function ComparePage({
       </main>
     );
   }
-
-  const { data: chips } = await supabase
-    .from('chips')
-    .select('*')
-    .in('id', ids);
 
   if (!chips || chips.length === 0) {
     return (
@@ -91,7 +123,7 @@ export default async function ComparePage({
                 <tr key={attr.key} className="border-b border-slate-800/50 hover:bg-slate-900/30 transition">
                   <td className="p-4 text-slate-400 font-medium sticky left-0 bg-black">{attr.label}</td>
                   {chips.map((chip) => {
-                    const value = chip[attr.key as keyof typeof chip];
+                    const value = chip[attr.key as keyof Chip];
                     const displayValue = attr.key === 'price_usd' 
                       ? `${attr.prefix || ''}${Number(value).toLocaleString()}`
                       : `${value}${attr.suffix || ''}`;
