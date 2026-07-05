@@ -3,8 +3,11 @@ import Link from 'next/link';
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white relative overflow-hidden">
+      {/* 顶部荧光绿科技光晕背景 */}
+      <div className="absolute top-[-80px] left-1/2 -translate-x-1/2 w-[1400px] h-[800px] bg-emerald-500/25 rounded-full blur-[180px] pointer-events-none" />
+      <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-emerald-400/30 rounded-full blur-[80px] pointer-events-none" />
       {/* 背景绿色光晕 */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
+
 
       {/* 导航栏 */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-xl border-b border-slate-800">
