@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import ReactECharts from 'echarts-for-react';
+import { saveComparison, getSavedComparisons } from '@/lib/storage';
 
 interface Chip {
   id: string;
@@ -24,6 +25,7 @@ export default function CompareContent() {
   const ids = searchParams.get('ids')?.split(',').filter(Boolean) || [];
   const [chips, setChips] = useState<Chip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savedMsg, setSavedMsg] = useState('');
 
   useEffect(() => {
     if (ids.length >= 2) {
@@ -39,6 +41,15 @@ export default function CompareContent() {
       setLoading(false);
     }
   }, [ids.join(',')]);
+
+  const handleSave = () => {
+    if (chips.length < 2) return;
+    const names = chips.map(c => c.name);
+    const idsArr = chips.map(c => c.id);
+    saveComparison(idsArr, names);
+    setSavedMsg('Comparison saved to My Collections!');
+    setTimeout(() => setSavedMsg(''), 3000);
+  };
 
   if (loading) {
     return (
@@ -70,7 +81,6 @@ export default function CompareContent() {
     );
   }
 
-  // ECharts 配置：FP16 算力柱状图
   const chartOption = {
     backgroundColor: 'transparent',
     title: {
@@ -119,7 +129,6 @@ export default function CompareContent() {
     }]
   };
 
-  // 性价比图表：TFLOPS / $
   const pricePerfOption = {
     backgroundColor: 'transparent',
     title: {
@@ -196,17 +205,38 @@ export default function CompareContent() {
               RealPerf<span className="text-emerald-400">.ai</span>
             </span>
           </Link>
-          <Link href="/chips" className="text-sm font-medium text-slate-400 hover:text-white transition">
-            ← 返回列表
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/collections" className="text-sm text-slate-400 hover:text-white transition">My Collections</Link>
+            <Link href="/chips" className="text-sm font-medium text-slate-400 hover:text-white transition">
+              ← 返回列表
+            </Link>
+          </div>
         </div>
       </nav>
 
       <div className="p-8 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2">Chip Comparison</h1>
-        <p className="text-slate-500 mb-8">并排对比各款 AI 加速器的核心参数</p>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h1 className="text-3xl font-bold">Chip Comparison</h1>
+            <p className="text-slate-500">并排对比各款 AI 加速器的核心参数</p>
+          </div>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 bg-slate-900 border border-slate-700 text-emerald-400 rounded-full hover:border-emerald-500 transition text-sm font-medium flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+            Save Comparison
+          </button>
+        </div>
+        
+        {savedMsg && (
+          <div className="mb-4 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm">
+            {savedMsg}
+          </div>
+        )}
 
-        {/* 图表区域 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
           <div className="bg-slate-950 border border-slate-800 rounded-xl p-6">
             <ReactECharts option={chartOption} style={{ height: '320px' }} />
@@ -216,7 +246,6 @@ export default function CompareContent() {
           </div>
         </div>
 
-        {/* 对比表格 */}
         <div className="overflow-x-auto rounded-xl border border-slate-800">
           <table className="w-full border-collapse">
             <thead>
