@@ -4,8 +4,8 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white relative overflow-hidden">
       {/* 顶部荧光绿科技光晕背景 */}
-      <div className="absolute top-[-80px] left-1/2 -translate-x-1/2 w-[1400px] h-[800px] bg-emerald-500/25 rounded-full blur-[180px] pointer-events-none" />
-      <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-emerald-400/30 rounded-full blur-[80px] pointer-events-none" />
+      <div className="absolute top-[-80px] left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-emerald-500/20 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[400px] h-[200px] bg-emerald-400/35 rounded-full blur-[60px] pointer-events-none" />
       {/* 背景绿色光晕 */}
 
 
