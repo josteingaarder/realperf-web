@@ -1,32 +1,21 @@
-'use client';
-
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { getFavorites, getSavedComparisons } from '@/lib/storage';
-import { supabase } from '@/lib/supabase';
+import type { Metadata } from 'next';
+import StatsCards from './StatsCards';
+import ClientCollections from './ClientCollections';
 
-interface Chip {
-  id: string;
-  name: string;
-  manufacturer: string;
-  category: string;
-  fp16_tflops: number;
-}
+export const metadata: Metadata = {
+  title: 'RealPerf.ai - AI Chip Benchmark Database & Comparison',
+  description: 'Compare AI accelerators including H100, MI300X, Ascend, TPU and more. Real-time benchmarks, specs, and price tracking.',
+  keywords: ['AI chip', 'GPU benchmark', 'H100', 'MI300X', 'NVIDIA', 'AMD', 'MLPerf'],
+  openGraph: {
+    title: 'RealPerf.ai - AI Chip Database',
+    description: 'Compare AI accelerators with real benchmark data',
+    type: 'website',
+    url: 'https://www.realperf.ai',
+  },
+};
 
 export default function Home() {
-  const [favChips, setFavChips] = useState<Chip[]>([]);
-  const [savedComps, setSavedComps] = useState(getSavedComparisons());
-
-  useEffect(() => {
-    const favIds = getFavorites();
-    if (favIds.length > 0) {
-      supabase.from('chips').select('id,name,manufacturer,category,fp16_tflops').in('id', favIds).then(({ data }) => {
-        setFavChips(data || []);
-      });
-    }
-    setSavedComps(getSavedComparisons());
-  }, []);
-
   return (
     <main className="min-h-screen bg-black text-white relative overflow-hidden">
       {/* 双层荧光绿科技光晕 */}
@@ -67,7 +56,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900/80 border border-slate-800 rounded-full text-sm text-emerald-400 mb-8">
             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            27+ AI Accelerators with Real Benchmarks
+            Live AI Chip Database & Benchmarks
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -113,13 +102,13 @@ export default function Home() {
               <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              27+ AI Accelerators
+              Side-by-Side Comparison
             </div>
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              Side-by-Side Comparison
+              Real-time Data
             </div>
           </div>
         </div>
@@ -136,7 +125,7 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="text-lg font-bold text-white mb-2">Chip Database</h3>
-              <p className="text-sm text-slate-400">Browse 27+ AI accelerators from NVIDIA, AMD, Intel, Huawei, and more. Filter by specs and price.</p>
+              <p className="text-sm text-slate-400">Browse AI accelerators from NVIDIA, AMD, Intel, Huawei, and more. Filter by specs and price.</p>
             </Link>
 
             <Link href="/chips" className="group bg-slate-950 border border-slate-800 rounded-xl p-8 hover:border-emerald-500/50 transition">
@@ -162,49 +151,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 我的收藏（仅在有数据时显示） */}
-      {(favChips.length > 0 || savedComps.length > 0) && (
-        <section className="px-6 pb-12">
-          <div className="max-w-5xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">My Collections</h2>
-              <Link href="/collections" className="text-sm text-emerald-400 hover:underline">View All</Link>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {favChips.slice(0, 3).map((chip) => (
-                <Link 
-                  key={chip.id} 
-                  href={`/chips/${chip.id}`}
-                  className="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-emerald-500/50 transition"
-                >
-                  <div>
-                    <div className="text-sm text-emerald-400 font-semibold">{chip.manufacturer}</div>
-                    <div className="text-white font-medium">{chip.name}</div>
-                  </div>
-                  <div className="text-sm text-slate-500">{chip.fp16_tflops} TFLOPS</div>
-                </Link>
-              ))}
-              
-              {savedComps.slice(0, 2).map((comp, i) => (
-                <Link 
-                  key={i} 
-                  href={`/compare?ids=${comp.ids.join(',')}`}
-                  className="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-emerald-500/50 transition"
-                >
-                  <div>
-                    <div className="text-sm text-slate-500">Saved Comparison</div>
-                    <div className="text-white font-medium text-sm truncate max-w-[200px]">{comp.names.join(' vs ')}</div>
-                  </div>
-                  <div className="text-xs text-emerald-400">Compare →</div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {/* 我的收藏（Client Component） */}
+      <ClientCollections />
 
-      {/* 数据仪表盘预览 */}
+      {/* 数据仪表盘 - 动态真实数据 */}
       <section className="px-6 pb-20">
         <div className="max-w-5xl mx-auto">
           <div className="bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl shadow-emerald-500/5 overflow-hidden">
@@ -213,7 +163,7 @@ export default function Home() {
                 <div className="w-3 h-3 rounded-full bg-red-500"></div>
                 <div className="w-3 h-3 rounded-full bg-amber-500"></div>
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span className="ml-3 text-sm text-slate-500 font-mono">realperf.ai / chip-comparison</span>
+                <span className="ml-3 text-sm text-slate-500 font-mono">realperf.ai / live-stats</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs rounded-full border border-emerald-500/20">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
@@ -221,35 +171,7 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-6 rounded-xl bg-slate-900/50 border border-slate-800">
-                <div className="text-sm text-slate-500 mb-2">FP16 Peak Performance</div>
-                <div className="text-3xl font-bold text-white">1,979 <span className="text-lg text-slate-600">TFLOPS</span></div>
-                <div className="text-sm text-emerald-400 mt-2 flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                  H100 SXM5
-                </div>
-              </div>
-              
-              <div className="p-6 rounded-xl bg-slate-900/50 border border-slate-800">
-                <div className="text-sm text-slate-500 mb-2">Memory Bandwidth</div>
-                <div className="text-3xl font-bold text-white">3.35 <span className="text-lg text-slate-600">TB/s</span></div>
-                <div className="text-sm text-emerald-400 mt-2 flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                  H200
-                </div>
-              </div>
-              
-              <div className="p-6 rounded-xl bg-slate-900/50 border border-slate-800">
-                <div className="text-sm text-slate-500 mb-2">Chips in Database</div>
-                <div className="text-3xl font-bold text-white">27+</div>
-                <div className="text-sm text-emerald-400 mt-2">NVIDIA, AMD, Intel, Huawei...</div>
-              </div>
-            </div>
+            <StatsCards />
           </div>
         </div>
       </section>
