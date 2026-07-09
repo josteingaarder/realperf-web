@@ -37,10 +37,9 @@ export default function Home() {
           </div>
           
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-            <Link href="/chips" className="hover:text-white transition">Cloud</Link>
-            <Link href="/edge" className="hover:text-white transition">Edge</Link>
-            <Link href="/collections" className="hover:text-white transition">My Collections</Link>
-          </div>
+            <Link href="/chips" className="text-white hover:text-emerald-400 transition text-base font-medium">Cloud</Link>
+            <Link href="/edge" className="text-white hover:text-emerald-400 transition text-base font-medium">Edge</Link>
+            </div>
 
           <Link href="/collections" className="text-sm font-medium px-4 py-2 bg-emerald-500 text-black rounded-full hover:bg-emerald-400 transition font-semibold">My Collection</Link>
         </div>

@@ -32,10 +32,9 @@ export default async function EdgePage() {
           </Link>
           
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-            <Link href="/chips" className="hover:text-white transition">Cloud</Link>
-            <Link href="/edge" className="text-white">Edge</Link>
-            <Link href="/collections" className="hover:text-white transition">My Collections</Link>
-          </div>
+            <Link href="/chips" className="text-white hover:text-emerald-400 transition text-base font-medium">Cloud</Link>
+            <Link href="/edge" className="text-emerald-400 font-semibold">Edge</Link>
+            </div>
 
           <Link 
             href="/collections"

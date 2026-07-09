@@ -33,8 +33,8 @@ export default async function ChipsPage() {
           </Link>
           
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-            <Link href="/chips" className="text-white">Cloud</Link>
-            <Link href="/edge" className="hover:text-white transition">Edge</Link>
+            <Link href="/chips" className="text-emerald-400 font-semibold">Cloud</Link>
+            <Link href="/edge" className="text-white hover:text-emerald-400 transition text-base font-medium">Edge</Link>
             <Link href="/chips" className="hover:text-white transition">Benchmarks</Link>
             </div>
 

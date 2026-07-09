@@ -206,7 +206,6 @@ export default function CompareContent() {
             </span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link href="/collections" className="text-sm text-slate-400 hover:text-white transition">My Collections</Link>
             <Link href="/chips" className="text-sm font-medium text-slate-400 hover:text-white transition">
               ← 返回列表
             </Link>
