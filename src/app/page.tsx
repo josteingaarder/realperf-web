@@ -37,17 +37,12 @@ export default function Home() {
           </div>
           
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-            <Link href="/chips" className="hover:text-white transition">Chips</Link>
-            <Link href="/chips" className="hover:text-white transition">Compare</Link>
+            <Link href="/chips" className="hover:text-white transition">Cloud</Link>
+            <Link href="/edge" className="hover:text-white transition">Edge</Link>
             <Link href="/collections" className="hover:text-white transition">My Collections</Link>
           </div>
 
-          <Link 
-            href="/chips"
-            className="text-sm font-medium px-4 py-2 bg-emerald-500 text-black rounded-full hover:bg-emerald-400 transition font-semibold"
-          >
-            Explore Chips
-          </Link>
+          <Link href="/collections" className="text-sm font-medium px-4 py-2 bg-emerald-500 text-black rounded-full hover:bg-emerald-400 transition font-semibold">My Collection</Link>
         </div>
       </nav>
 
@@ -78,7 +73,7 @@ export default function Home() {
               href="/chips"
               className="group flex items-center gap-2 px-6 py-3 bg-emerald-500 text-black rounded-full hover:bg-emerald-400 transition font-semibold"
             >
-              Explore Chips
+              My Collection
               <svg className="w-4 h-4 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>

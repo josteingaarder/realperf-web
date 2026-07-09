@@ -33,22 +33,16 @@ export default async function ChipsPage() {
           </Link>
           
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-            <Link href="/chips" className="text-white">Chips</Link>
-            <Link href="/chips" className="hover:text-white transition">Compare</Link>
+            <Link href="/chips" className="text-white">Cloud</Link>
+            <Link href="/edge" className="hover:text-white transition">Edge</Link>
             <Link href="/chips" className="hover:text-white transition">Benchmarks</Link>
-            <a href="#" className="hover:text-white transition">Docs</a>
-          </div>
+            </div>
 
           <div className="flex items-center gap-3">
             <button className="hidden md:block text-sm font-medium text-slate-400 hover:text-white transition">
               Sign in
             </button>
-            <Link 
-              href="/chips"
-              className="text-sm font-medium px-4 py-2 bg-emerald-500 text-black rounded-full hover:bg-emerald-400 transition font-semibold"
-            >
-              Explore Chips
-            </Link>
+            <Link href="/collections" className="text-sm font-medium px-4 py-2 bg-emerald-500 text-black rounded-full hover:bg-emerald-400 transition font-semibold">My Collection</Link>
           </div>
         </div>
       </nav>
