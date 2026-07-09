@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import EdgeChipFilter from './EdgeChipFilter';
 
 export default async function EdgePage() {
   const { data: chips, error } = await supabase
@@ -34,7 +35,7 @@ export default async function EdgePage() {
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
             <Link href="/chips" className="text-white hover:text-emerald-400 transition text-base font-medium">Cloud</Link>
             <Link href="/edge" className="text-emerald-400 font-semibold">Edge</Link>
-            </div>
+          </div>
 
           <Link 
             href="/collections"
@@ -51,27 +52,7 @@ export default async function EdgePage() {
           <p className="text-sm text-slate-500 mt-1">Low-power accelerators for edge inference and embedded AI</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {chips.map((chip) => (
-            <div 
-              key={chip.id} 
-              className="bg-slate-950 p-6 rounded-xl border border-slate-800 hover:border-emerald-500/50 transition"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div className="text-sm text-emerald-400 font-semibold">{chip.manufacturer}</div>
-                <div className="text-xs text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-800">{chip.category}</div>
-              </div>
-              <h2 className="text-xl font-bold mb-4 text-white">{chip.name}</h2>
-              <div className="grid grid-cols-2 gap-3 text-sm text-slate-300">
-                <div>AI TOPS: <span className="text-white">{chip.ai_tops}</span></div>
-                <div>TDP: <span className="text-white">{chip.tdp_watt}W</span></div>
-                {chip.vram_gb > 0 && <div>VRAM: <span className="text-white">{chip.vram_gb}GB</span></div>}
-                <div>Process: <span className="text-white">{chip.process_node}</span></div>
-                <div className="col-span-2">Price: <span className="text-emerald-400">${chip.price_usd?.toLocaleString()}</span></div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <EdgeChipFilter chips={chips} />
       </div>
     </main>
   );
