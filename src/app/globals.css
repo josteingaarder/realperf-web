@@ -24,3 +24,112 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-position: center;
+  background-size: 56px 56px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent 78%);
+}
+
+.hero-spotlight {
+  background:
+    radial-gradient(circle at 50% 10%, rgba(16, 185, 129, 0.16), transparent 34%),
+    radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.09), transparent 28%);
+}
+
+.animate-fade-up {
+  animation: fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-delay-1 {
+  animation-delay: 0.12s;
+}
+
+.animate-delay-2 {
+  animation-delay: 0.24s;
+}
+
+.animate-delay-3 {
+  animation-delay: 0.36s;
+}
+
+.animate-delay-4 {
+  animation-delay: 0.48s;
+}
+
+.animate-float-slow {
+  animation: float-y 8s ease-in-out infinite;
+}
+
+.animate-float-slower {
+  animation: float-y 11s ease-in-out infinite;
+}
+
+.animate-drift {
+  animation: drift 14s ease-in-out infinite alternate;
+}
+
+.animate-drift-reverse {
+  animation: drift 18s ease-in-out infinite alternate-reverse;
+}
+
+.scanline {
+  animation: scanline 6s linear infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: translate3d(-1.5%, 0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate3d(1.5%, 2.5%, 0) scale(1.08);
+  }
+}
+
+@keyframes scanline {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-float-slow,
+  .animate-float-slower,
+  .animate-drift,
+  .animate-drift-reverse,
+  .scanline {
+    animation: none !important;
+  }
+}
