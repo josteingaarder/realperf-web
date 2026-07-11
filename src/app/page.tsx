@@ -18,7 +18,6 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white relative overflow-hidden">
-      <div className="hero-grid pointer-events-none absolute inset-0" />
       <div className="hero-spotlight pointer-events-none absolute inset-x-0 top-0 h-[720px]" />
 
       {/* 双层荧光绿科技光晕 */}
