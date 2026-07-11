@@ -17,7 +17,7 @@ export default async function ChipDetailPage(props: any) {
   }
 
   const { data: chip, error } = await supabase
-    .from('chips')
+    .from('cloud_chips')
     .select('*')
     .eq('id', id)
     .single();

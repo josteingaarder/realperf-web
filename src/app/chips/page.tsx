@@ -4,7 +4,7 @@ import ChipFilter from './ChipFilter';
 
 export default async function ChipsPage() {
   const { data: chips, error } = await supabase
-    .from('chips')
+    .from('cloud_chips')
     .select('*')
     .order('fp16_tflops', { ascending: false });
 

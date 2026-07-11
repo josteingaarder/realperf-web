@@ -20,7 +20,7 @@ export default function ClientCollections() {
   useEffect(() => {
     const favIds = getFavorites();
     if (favIds.length > 0) {
-      supabase.from('chips').select('id,name,manufacturer,category,fp16_tflops').in('id', favIds).then(({ data }) => {
+      supabase.from('cloud_chips').select('id,name,manufacturer,category,fp16_tflops').in('id', favIds).then(({ data }) => {
         setFavChips(data || []);
       });
     }

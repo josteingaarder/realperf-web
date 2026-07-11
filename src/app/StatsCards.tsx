@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 export default async function StatsCards() {
   // 查询 FP16 最高的芯片
   const { data: topPerf } = await supabase
-    .from('chips')
+    .from('cloud_chips')
     .select('name,fp16_tflops')
     .order('fp16_tflops', { ascending: false })
     .limit(1)
@@ -11,7 +11,7 @@ export default async function StatsCards() {
 
   // 查询显存最大的芯片
   const { data: topVram } = await supabase
-    .from('chips')
+    .from('cloud_chips')
     .select('name,vram_gb')
     .order('vram_gb', { ascending: false })
     .limit(1)
@@ -19,7 +19,7 @@ export default async function StatsCards() {
 
   // 查询芯片总数
   const { count } = await supabase
-    .from('chips')
+    .from('cloud_chips')
     .select('*', { count: 'exact', head: true });
 
   return (

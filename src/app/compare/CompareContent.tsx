@@ -30,7 +30,7 @@ export default function CompareContent() {
   useEffect(() => {
     if (ids.length >= 2) {
       supabase
-        .from('chips')
+        .from('cloud_chips')
         .select('*')
         .in('id', ids)
         .then(({ data }) => {
