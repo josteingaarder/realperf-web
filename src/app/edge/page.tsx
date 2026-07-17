@@ -19,7 +19,10 @@ export default async function EdgePage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <SiteHeader activeSection="edge" />
+      <SiteHeader
+        activeSection="edge"
+        cta={{ href: '/collections', label: 'My Collections' }}
+      />
 
       <div className="p-8 max-w-7xl mx-auto">
         <div className="mb-8">
