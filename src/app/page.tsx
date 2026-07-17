@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import StatsCards from './StatsCards';
 import ClientCollections from './ClientCollections';
+import SiteHeader from '@/components/SiteHeader';
 
 export const metadata: Metadata = {
   title: 'RealPerf.ai - AI Chip Benchmark Database & Comparison',
@@ -26,28 +27,7 @@ export default function Home() {
       <div className="absolute top-52 left-[10%] w-32 h-32 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none animate-float-slower" />
       <div className="absolute top-80 right-[12%] w-40 h-40 bg-emerald-300/10 rounded-full blur-3xl pointer-events-none animate-drift-reverse" />
 
-      {/* 导航栏 */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-xl border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-              </svg>
-            </div>
-            <span className="text-xl font-bold text-white tracking-tight">
-              RealPerf<span className="text-emerald-400">.ai</span>
-            </span>
-          </div>
-          
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-            <Link href="/chips" className="text-white hover:text-emerald-400 transition text-base font-medium">Cloud</Link>
-            <Link href="/edge" className="text-white hover:text-emerald-400 transition text-base font-medium">Edge</Link>
-            </div>
-
-          <Link href="/collections" className="text-sm font-medium px-4 py-2 bg-emerald-500 text-black rounded-full hover:bg-emerald-400 transition font-semibold">My Collection</Link>
-        </div>
-      </nav>
+      <SiteHeader cta={{ href: '/collections', label: 'My Collections' }} />
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-6">
@@ -73,10 +53,10 @@ export default function Home() {
 
           <div className="animate-fade-up animate-delay-3 flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <Link 
-              href="/chips"
+              href="/collections"
               className="group flex items-center gap-2 px-6 py-3 bg-emerald-500 text-black rounded-full hover:bg-emerald-400 hover:shadow-[0_0_30px_rgba(52,211,153,0.35)] transition-all duration-300 font-semibold"
             >
-              My Collection
+              View My Collections
               <svg className="w-4 h-4 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
@@ -138,15 +118,15 @@ export default function Home() {
               <p className="relative text-sm text-slate-400">Select up to 4 chips and compare FP16 performance, price, and specs side by side with interactive charts.</p>
             </Link>
 
-            <Link href="/chips" className="group relative overflow-hidden bg-slate-950/90 border border-slate-800 rounded-xl p-8 hover:border-emerald-500/50 hover:-translate-y-1 hover:shadow-[0_18px_60px_rgba(16,185,129,0.12)] transition-all duration-300 animate-fade-up animate-delay-3">
+            <Link href="/collections" className="group relative overflow-hidden bg-slate-950/90 border border-slate-800 rounded-xl p-8 hover:border-emerald-500/50 hover:-translate-y-1 hover:shadow-[0_18px_60px_rgba(16,185,129,0.12)] transition-all duration-300 animate-fade-up animate-delay-3">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.16),transparent_55%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition">
                 <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h3 className="relative text-lg font-bold text-white mb-2">Tool Chain</h3>
-              <p className="relative text-sm text-slate-400">Follow the workflow around AI deployment, evaluation, and optimization with practical tooling for different workloads.</p>
+              <h3 className="relative text-lg font-bold text-white mb-2">Saved Collections</h3>
+              <p className="relative text-sm text-slate-400">Keep favorite Cloud and Edge chips together, then reopen saved comparisons when you need to revisit a shortlist.</p>
             </Link>
           </div>
         </div>

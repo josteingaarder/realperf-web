@@ -1,9 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { getFavorites, toggleFavorite, isFavorite } from '@/lib/storage';
+import {
+  buildCompareHref,
+  getFavorites,
+  parseCompareItems,
+  toggleFavorite,
+} from '@/lib/storage';
 
 interface Chip {
   id: string;
@@ -18,11 +23,20 @@ interface Chip {
 }
 
 export default function ChipFilter({ chips }: { chips: Chip[] }) {
+  const searchParams = useSearchParams();
+  const initialSelectedIds = useMemo(
+    () =>
+      parseCompareItems(searchParams.get('items'), searchParams.get('ids'))
+        .filter((item) => item.source === 'cloud')
+        .map((item) => item.id)
+        .slice(0, 4),
+    [searchParams]
+  );
   const [search, setSearch] = useState('');
   const [manufacturer, setManufacturer] = useState('All');
   const [category, setCategory] = useState('All');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [favorites, setFavorites] = useState<string[]>(getFavorites());
+  const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
+  const [favorites, setFavorites] = useState(getFavorites());
   const router = useRouter();
 
   const manufacturers = useMemo(() => 
@@ -57,7 +71,7 @@ export default function ChipFilter({ chips }: { chips: Chip[] }) {
   };
 
   const handleToggleFavorite = (id: string) => {
-    toggleFavorite(id);
+    toggleFavorite({ id, source: 'cloud' });
     setFavorites(getFavorites());
   };
 
@@ -66,7 +80,9 @@ export default function ChipFilter({ chips }: { chips: Chip[] }) {
       window.alert('请至少选择 2 款芯片');
       return;
     }
-    router.push(`/compare?ids=${selectedIds.join(',')}`);
+    router.push(
+      buildCompareHref(selectedIds.map((id) => ({ id, source: 'cloud' as const })))
+    );
   };
 
   return (
@@ -106,7 +122,7 @@ export default function ChipFilter({ chips }: { chips: Chip[] }) {
 
         <div className="text-sm text-slate-500">
           Showing <span className="text-emerald-400 font-medium">{filtered.length}</span> of {chips.length} chips
-          {search && <span className="ml-2">for "<span className="text-slate-300">{search}</span>"</span>}
+          {search && <span className="ml-2">matching <span className="text-slate-300">{search}</span></span>}
         </div>
       </div>
 
@@ -132,7 +148,9 @@ export default function ChipFilter({ chips }: { chips: Chip[] }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-24">
         {filtered.map((chip) => {
           const isSelected = selectedIds.includes(chip.id);
-          const isFav = favorites.includes(chip.id);
+          const isFav = favorites.some(
+            (favorite) => favorite.id === chip.id && favorite.source === 'cloud'
+          );
           return (
             <div 
               key={chip.id} 
