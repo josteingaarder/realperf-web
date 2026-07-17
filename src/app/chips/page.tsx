@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import ChipFilter from './ChipFilter';
 import SiteHeader from '@/components/SiteHeader';
@@ -29,7 +30,9 @@ export default async function ChipsPage() {
           <p className="text-sm text-slate-500 mt-1">Search, filter, and compare AI accelerators</p>
         </div>
         
-        <ChipFilter chips={chips} />
+        <Suspense fallback={<div className="text-slate-500">Loading chip filters...</div>}>
+          <ChipFilter chips={chips} />
+        </Suspense>
       </div>
     </main>
   );

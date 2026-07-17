@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import EdgeChipFilter from './EdgeChipFilter';
 import SiteHeader from '@/components/SiteHeader';
@@ -29,7 +30,9 @@ export default async function EdgePage() {
           <p className="text-sm text-slate-500 mt-1">Low-power accelerators for edge inference and embedded AI</p>
         </div>
 
-        <EdgeChipFilter chips={chips} />
+        <Suspense fallback={<div className="text-slate-500">Loading edge chips...</div>}>
+          <EdgeChipFilter chips={chips} />
+        </Suspense>
       </div>
     </main>
   );
