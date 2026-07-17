@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   },
   description: "AI accelerator database for comparing cloud and edge chips with specs, benchmarks, pricing, and saved collections.",
   applicationName: "RealPerf.ai",
+  icons: {
+    icon: "/icon",
+    apple: "/apple-icon",
+  },
   keywords: [
     "AI chip",
     "GPU benchmark",

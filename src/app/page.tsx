@@ -52,10 +52,10 @@ export default function Home() {
 
           <div className="animate-fade-up animate-delay-3 flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <Link 
-              href="/collections"
+              href="/chip-of-the-day"
               className="group flex items-center gap-2 px-6 py-3 bg-emerald-500 text-black rounded-full hover:bg-emerald-400 hover:shadow-[0_0_30px_rgba(52,211,153,0.35)] transition-all duration-300 font-semibold"
             >
-              View My Collections
+              Chip of the Day
               <svg className="w-4 h-4 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
@@ -100,15 +100,17 @@ export default function Home() {
               <p className="relative text-sm text-slate-400">Browse AI accelerators from NVIDIA, AMD, Intel, Huawei, and more. Filter by specs and price.</p>
             </Link>
 
-            <Link href="/chips" className="group relative overflow-hidden bg-slate-950/90 border border-slate-800 rounded-xl p-8 hover:border-emerald-500/50 hover:-translate-y-1 hover:shadow-[0_18px_60px_rgba(16,185,129,0.12)] transition-all duration-300 animate-fade-up animate-delay-2">
+            <Link href="/architecture" className="group relative overflow-hidden bg-slate-950/90 border border-slate-800 rounded-xl p-8 hover:border-emerald-500/50 hover:-translate-y-1 hover:shadow-[0_18px_60px_rgba(16,185,129,0.12)] transition-all duration-300 animate-fade-up animate-delay-2">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.16),transparent_55%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition">
                 <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  <rect x="7" y="7" width="10" height="10" rx="1.5" strokeWidth={2} />
+                  <rect x="10" y="10" width="4" height="4" rx="0.6" strokeWidth={2} />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" />
                 </svg>
               </div>
-              <h3 className="relative text-lg font-bold text-white mb-2">Compare & Chart</h3>
-              <p className="relative text-sm text-slate-400">Select up to 4 chips and compare FP16 performance, price, and specs side by side with interactive charts.</p>
+              <h3 className="relative text-lg font-bold text-white mb-2">Architecture</h3>
+              <p className="relative text-sm text-slate-400">Explore chip architecture diagrams, interface definitions, I/O counts, bandwidth, and hardware capability details across accelerator families.</p>
             </Link>
 
             <Link href="/tool-chain" className="group relative overflow-hidden bg-slate-950/90 border border-slate-800 rounded-xl p-8 hover:border-emerald-500/50 hover:-translate-y-1 hover:shadow-[0_18px_60px_rgba(16,185,129,0.12)] transition-all duration-300 animate-fade-up animate-delay-3">
@@ -135,7 +137,7 @@ export default function Home() {
                 <div className="w-3 h-3 rounded-full bg-red-500"></div>
                 <div className="w-3 h-3 rounded-full bg-amber-500"></div>
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span className="ml-3 text-sm text-slate-500 font-mono">realperf.ai / live-stats</span>
+                <span className="ml-3 text-sm text-slate-500 font-mono">Model Performance Benchmark</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs rounded-full border border-emerald-500/20">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
