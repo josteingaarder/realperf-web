@@ -46,7 +46,7 @@ export default function CollectionsPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold">My Collections</h1>
           <p className="text-sm text-slate-500 mt-1">
-            管理你收藏的 Cloud / Edge 芯片，以及保存过的对比方案
+            Manage your favorite Cloud and Edge chips, as well as your saved comparisons.
           </p>
         </div>
 

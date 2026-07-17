@@ -63,7 +63,7 @@ export default function ChipFilter({ chips }: { chips: Chip[] }) {
     setSelectedIds(prev => {
       if (prev.includes(id)) return prev.filter(i => i !== id);
       if (prev.length >= 4) {
-        window.alert('最多选择 4 款芯片对比');
+        window.alert('You can compare up to 4 chips at a time.');
         return prev;
       }
       return [...prev, id];
@@ -77,7 +77,7 @@ export default function ChipFilter({ chips }: { chips: Chip[] }) {
 
   const handleCompare = () => {
     if (selectedIds.length < 2) {
-      window.alert('请至少选择 2 款芯片');
+      window.alert('Please select at least 2 chips.');
       return;
     }
     router.push(
@@ -129,18 +129,18 @@ export default function ChipFilter({ chips }: { chips: Chip[] }) {
       {/* 底部浮动对比栏 */}
       {selectedIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 border-2 border-emerald-500 rounded-full px-6 py-3 flex items-center gap-4 shadow-2xl shadow-emerald-500/20">
-          <span className="text-sm text-slate-300 font-medium">已选择 {selectedIds.length} 款</span>
+          <span className="text-sm text-slate-300 font-medium">{selectedIds.length} selected</span>
           <button 
             onClick={handleCompare}
             className="px-5 py-2 bg-emerald-500 text-black text-sm font-bold rounded-full hover:bg-emerald-400 transition"
           >
-            开始对比
+            Compare Now
           </button>
           <button 
             onClick={() => setSelectedIds([])}
             className="text-xs text-slate-500 hover:text-white underline"
           >
-            清空
+            Clear
           </button>
         </div>
       )}

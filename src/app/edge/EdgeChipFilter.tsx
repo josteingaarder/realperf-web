@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   buildCompareHref,
@@ -56,7 +57,7 @@ export default function EdgeChipFilter({ chips }: { chips: EdgeChip[] }) {
     setSelectedIds(prev => {
       if (prev.includes(id)) return prev.filter(i => i !== id);
       if (prev.length >= 4) {
-        window.alert('最多选择 4 款芯片对比');
+        window.alert('You can compare up to 4 chips at a time.');
         return prev;
       }
       return [...prev, id];
@@ -70,7 +71,7 @@ export default function EdgeChipFilter({ chips }: { chips: EdgeChip[] }) {
 
   const handleCompare = () => {
     if (selectedIds.length < 2) {
-      window.alert('请至少选择 2 款芯片');
+      window.alert('Please select at least 2 chips.');
       return;
     }
     router.push(
@@ -114,18 +115,18 @@ export default function EdgeChipFilter({ chips }: { chips: EdgeChip[] }) {
       {/* 底部浮动对比栏 */}
       {selectedIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 border-2 border-emerald-500 rounded-full px-6 py-3 flex items-center gap-4 shadow-2xl shadow-emerald-500/20">
-          <span className="text-sm text-slate-300 font-medium">已选择 {selectedIds.length} 款</span>
+          <span className="text-sm text-slate-300 font-medium">{selectedIds.length} selected</span>
           <button 
             onClick={handleCompare}
             className="px-5 py-2 bg-emerald-500 text-black text-sm font-bold rounded-full hover:bg-emerald-400 transition"
           >
-            开始对比
+            Compare Now
           </button>
           <button 
             onClick={() => setSelectedIds([])}
             className="text-xs text-slate-500 hover:text-white underline"
           >
-            清空
+            Clear
           </button>
         </div>
       )}
@@ -186,7 +187,7 @@ export default function EdgeChipFilter({ chips }: { chips: EdgeChip[] }) {
                 )}
               </button>
 
-              <div className="p-6">
+              <Link href={`/edge/${chip.id}`} className="block p-6">
                 <div className="flex justify-between items-start mb-3 pr-20">
                   <div className="text-sm text-emerald-400 font-bold tracking-wide uppercase">{chip.manufacturer}</div>
                   <div className="text-xs text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-800">{chip.category}</div>
@@ -203,7 +204,7 @@ export default function EdgeChipFilter({ chips }: { chips: EdgeChip[] }) {
                   <div className="text-slate-500">Process: <span className="text-slate-200 font-medium">{chip.process_node}</span></div>
                   <div className="col-span-2 text-slate-500">Price: <span className="text-emerald-400 font-bold">${chip.price_usd?.toLocaleString()}</span></div>
                 </div>
-              </div>
+              </Link>
             </div>
           );
         })}

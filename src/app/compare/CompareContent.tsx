@@ -79,14 +79,14 @@ export default function CompareContent() {
         <SiteHeader secondaryLink={{ href: '/chips', label: 'Back to Cloud Database' }} />
         <div className="flex items-center justify-center px-6 py-24">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">请选择至少 2 款芯片进行对比</h1>
-            <p className="text-slate-500 mb-6">你可以从 Cloud 或 Edge 列表中先加入一款，再继续补齐对比对象。</p>
+            <h1 className="text-2xl font-bold mb-4">Select at least 2 chips to compare</h1>
+            <p className="text-slate-500 mb-6">Start with one chip from the Cloud or Edge database, then add more to complete the comparison.</p>
             <div className="flex items-center justify-center gap-4">
               <Link href="/chips" className="text-emerald-400 hover:underline">
-                浏览 Cloud 芯片
+                Browse Cloud Chips
               </Link>
               <Link href="/edge" className="text-emerald-400 hover:underline">
-                浏览 Edge 芯片
+                Browse Edge Chips
               </Link>
             </div>
           </div>
@@ -109,9 +109,9 @@ export default function CompareContent() {
         <SiteHeader secondaryLink={{ href: '/chips', label: 'Back to Cloud Database' }} />
         <div className="flex items-center justify-center px-6 py-24">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">未找到芯片数据</h1>
+            <h1 className="text-2xl font-bold mb-4">Chip data not found</h1>
             <Link href="/chips" className="text-emerald-400 hover:underline">
-              返回芯片列表
+              Back to chip database
             </Link>
           </div>
         </div>
@@ -262,7 +262,7 @@ export default function CompareContent() {
         <div className="flex items-center justify-between mb-2">
           <div>
             <h1 className="text-3xl font-bold">Chip Comparison</h1>
-            <p className="text-slate-500">并排对比各款 AI 加速器的核心参数与价格效率</p>
+            <p className="text-slate-500">Compare core specs and price efficiency across AI accelerators side by side.</p>
           </div>
           <button
             onClick={handleSave}
@@ -283,7 +283,7 @@ export default function CompareContent() {
 
         {hasMixedSources && (
           <div className="mb-6 px-4 py-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-300 text-sm">
-            当前对比同时包含 Cloud 与 Edge 芯片，性能图会分别使用 FP16 TFLOPS 和 AI TOPS 作为主指标。
+            This comparison includes both Cloud and Edge chips, so the charts use FP16 TFLOPS and AI TOPS as their primary metrics.
           </div>
         )}
 

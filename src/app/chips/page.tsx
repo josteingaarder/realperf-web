@@ -19,10 +19,7 @@ export default async function ChipsPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <SiteHeader
-        activeSection="cloud"
-        cta={{ href: '/collections', label: 'My Collections' }}
-      />
+      <SiteHeader activeSection="cloud" />
 
       <div className="p-8 max-w-7xl mx-auto">
         <div className="mb-8">

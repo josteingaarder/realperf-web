@@ -16,7 +16,6 @@ interface SiteHeaderProps {
 const navItems: Array<{ href: string; label: string; section: NavSection }> = [
   { href: '/chips', label: 'Cloud', section: 'cloud' },
   { href: '/edge', label: 'Edge', section: 'edge' },
-  { href: '/collections', label: 'Collections', section: 'collections' },
 ];
 
 function getNavClasses(isActive: boolean) {

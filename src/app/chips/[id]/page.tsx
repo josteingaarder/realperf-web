@@ -12,7 +12,7 @@ export default async function ChipDetailPage(props: { params: Promise<{ id: stri
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Missing chip ID</h1>
-          <Link href="/chips" className="text-emerald-400 hover:underline">返回芯片列表</Link>
+          <Link href="/chips" className="text-emerald-400 hover:underline">Back to chip database</Link>
         </div>
       </main>
     );
@@ -29,7 +29,7 @@ export default async function ChipDetailPage(props: { params: Promise<{ id: stri
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Chip not found</h1>
-          <Link href="/chips" className="text-emerald-400 hover:underline">返回芯片列表</Link>
+          <Link href="/chips" className="text-emerald-400 hover:underline">Back to chip database</Link>
         </div>
       </main>
     );

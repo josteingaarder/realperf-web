@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { serializeCompareItems, type ChipSource, type StoredChipRef } from '@/lib/storage';
+import { type ChipSource, type StoredChipRef } from '@/lib/storage';
 
 export interface FavoriteChipCard {
   id: string;
@@ -92,7 +92,7 @@ export async function fetchFavoriteChipCards(items: StoredChipRef[]) {
         category: chip.category,
         primaryMetricLabel: 'AI TOPS',
         primaryMetricValue: formatMetricValue(chip.ai_tops, 'TOPS'),
-        href: `/edge?items=${encodeURIComponent(serializeCompareItems([{ id: chip.id, source: 'edge' }]))}`,
+        href: `/edge/${chip.id}`,
       }))
     );
   }
