@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import BenchmarkImportPanel from '@/components/BenchmarkImportPanel';
 import ConsoleShell from '@/components/ConsoleShell';
 import { requireConsoleSession } from '@/lib/console-auth';
 import { fetchBenchmarkList } from '@/lib/benchmark-management';
@@ -54,6 +55,8 @@ export default async function ConsoleBenchmarksPage(props: {
             </Link>
           </div>
         </div>
+
+        <BenchmarkImportPanel />
 
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
           <table className="w-full border-collapse">

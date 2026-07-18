@@ -3,6 +3,14 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { canManageManufacturer, requireConsoleSession } from '@/lib/console-auth';
+import { fetchBenchmarkChipOptions, slugify, type BenchmarkChipOption } from '@/lib/benchmark-management';
+import {
+  parseBenchmarkImportCsv,
+  parseOptionalDecimal,
+  parseOptionalInteger,
+  parseOptionalText,
+  type ParsedBenchmarkImportRow,
+} from '@/lib/benchmark-import';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 type BenchmarkLifecycleStatus = 'draft' | 'pending_review' | 'published' | 'archived';
@@ -52,6 +60,417 @@ function assertStatusTransitionAllowed(isAdmin: boolean, nextStatus: BenchmarkLi
 
   if (nextStatus !== 'draft' && nextStatus !== 'pending_review') {
     throw new Error('Vendor accounts can only save drafts or submit for review.');
+  }
+}
+
+async function resolveOrCreateModel(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  actorId: string,
+  row: ParsedBenchmarkImportRow
+) {
+  const modelSlug = slugify(row.model_name);
+  const { data: existing } = await supabase.from('models').select('id').eq('slug', modelSlug).maybeSingle();
+
+  const payload = {
+    name: row.model_name,
+    slug: modelSlug,
+    category: row.model_category,
+    vendor: parseOptionalText(row.model_vendor),
+    family: parseOptionalText(row.model_family),
+    parameter_size_b: parseOptionalDecimal(row.parameter_size_b),
+    modality: parseOptionalText(row.modality),
+    updated_by: actorId,
+  };
+
+  if (existing) {
+    const { error } = await supabase.from('models').update(payload).eq('id', existing.id);
+    if (error) {
+      throw new Error(error.message);
+    }
+    return existing.id;
+  }
+
+  const { data, error } = await supabase
+    .from('models')
+    .insert({
+      ...payload,
+      created_by: actorId,
+      status: 'draft',
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? 'Failed to create model.');
+  }
+
+  return data.id;
+}
+
+async function resolveOrCreateVariant(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  actorId: string,
+  modelId: string,
+  row: ParsedBenchmarkImportRow
+) {
+  const payload = {
+    model_id: modelId,
+    name: row.variant_name,
+    precision: parseOptionalText(row.precision),
+    quantization: parseOptionalText(row.quantization),
+    context_length: parseOptionalInteger(row.context_length),
+    input_resolution: parseOptionalText(row.input_resolution),
+    weights_source_url: parseOptionalText(row.weights_source_url),
+    updated_by: actorId,
+  };
+
+  const { data: existing } = await supabase
+    .from('model_variants')
+    .select('id')
+    .eq('model_id', modelId)
+    .eq('name', row.variant_name)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase.from('model_variants').update(payload).eq('id', existing.id);
+    if (error) {
+      throw new Error(error.message);
+    }
+    return existing.id;
+  }
+
+  const { data, error } = await supabase
+    .from('model_variants')
+    .insert({
+      ...payload,
+      created_by: actorId,
+      status: 'draft',
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? 'Failed to create model variant.');
+  }
+
+  return data.id;
+}
+
+function equalNullable(left: string | number | null | undefined, right: string | number | null | undefined) {
+  return (left ?? null) === (right ?? null);
+}
+
+async function resolveOrCreateScenario(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  actorId: string,
+  variantId: string,
+  row: ParsedBenchmarkImportRow
+) {
+  const payload = {
+    model_variant_id: variantId,
+    task_type: row.task_type,
+    batch_size: parseOptionalInteger(row.batch_size),
+    sequence_length: parseOptionalInteger(row.sequence_length),
+    input_shape: parseOptionalText(row.input_shape),
+    dataset: parseOptionalText(row.dataset),
+    framework: row.framework,
+    runtime: parseOptionalText(row.runtime),
+    compiler: parseOptionalText(row.compiler),
+    metric_name: row.metric_name,
+    metric_unit: row.metric_unit,
+    updated_by: actorId,
+  };
+
+  const { data: candidates } = await supabase
+    .from('benchmark_scenarios')
+    .select('id,batch_size,sequence_length,input_shape,dataset,framework,runtime,compiler,metric_name,metric_unit,task_type')
+    .eq('model_variant_id', variantId)
+    .eq('task_type', row.task_type)
+    .eq('framework', row.framework)
+    .eq('metric_name', row.metric_name)
+    .eq('metric_unit', row.metric_unit);
+
+  const existing = (candidates ?? []).find((candidate) => {
+    return (
+      equalNullable(candidate.batch_size, payload.batch_size) &&
+      equalNullable(candidate.sequence_length, payload.sequence_length) &&
+      equalNullable(candidate.input_shape, payload.input_shape) &&
+      equalNullable(candidate.dataset, payload.dataset) &&
+      equalNullable(candidate.runtime, payload.runtime) &&
+      equalNullable(candidate.compiler, payload.compiler)
+    );
+  });
+
+  if (existing) {
+    const { error } = await supabase.from('benchmark_scenarios').update(payload).eq('id', existing.id);
+    if (error) {
+      throw new Error(error.message);
+    }
+    return existing.id;
+  }
+
+  const { data, error } = await supabase
+    .from('benchmark_scenarios')
+    .insert({
+      ...payload,
+      created_by: actorId,
+      status: 'draft',
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? 'Failed to create benchmark scenario.');
+  }
+
+  return data.id;
+}
+
+async function upsertBenchmarkResult(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  actorId: string,
+  chip: { id: string; manufacturer_id: string; source: 'cloud' | 'edge' },
+  scenarioId: string,
+  status: BenchmarkLifecycleStatus,
+  row: ParsedBenchmarkImportRow
+) {
+  const payload = {
+    chip_source: chip.source,
+    chip_id: chip.id,
+    manufacturer_id: chip.manufacturer_id,
+    scenario_id: scenarioId,
+    primary_value: parseOptionalDecimal(row.primary_value),
+    secondary_value: parseOptionalDecimal(row.secondary_value),
+    throughput: parseOptionalDecimal(row.throughput),
+    latency_ms_p50: parseOptionalDecimal(row.latency_ms_p50),
+    latency_ms_p99: parseOptionalDecimal(row.latency_ms_p99),
+    power_watt: parseOptionalDecimal(row.power_watt),
+    memory_gb: parseOptionalDecimal(row.memory_gb),
+    source_url: parseOptionalText(row.source_url),
+    notes: parseOptionalText(row.result_notes),
+    status,
+    published_at: status === 'published' ? new Date().toISOString() : null,
+    archived_at: status === 'archived' ? new Date().toISOString() : null,
+    updated_by: actorId,
+  };
+
+  if (payload.primary_value == null) {
+    throw new Error('primary_value is required.');
+  }
+
+  const { data: existing } = await supabase
+    .from('benchmark_results')
+    .select('id')
+    .eq('chip_source', chip.source)
+    .eq('chip_id', chip.id)
+    .eq('scenario_id', scenarioId)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase.from('benchmark_results').update(payload).eq('id', existing.id);
+    if (error) {
+      throw new Error(error.message);
+    }
+    return { id: existing.id, action: 'updated' as const };
+  }
+
+  const { data, error } = await supabase
+    .from('benchmark_results')
+    .insert({
+      ...payload,
+      created_by: actorId,
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? 'Failed to create benchmark result.');
+  }
+
+  return { id: data.id, action: 'created' as const };
+}
+
+async function upsertBenchmarkEvidence(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  resultId: string,
+  row: ParsedBenchmarkImportRow
+) {
+  const filePath = parseOptionalText(row.evidence_file_path);
+  if (!filePath) {
+    return;
+  }
+
+  const payload = {
+    benchmark_result_id: resultId,
+    kind: parseOptionalText(row.evidence_kind) ?? 'artifact',
+    file_path: filePath,
+    title: parseOptionalText(row.evidence_title),
+    description: parseOptionalText(row.evidence_description),
+  };
+
+  const { data: existing } = await supabase
+    .from('benchmark_evidence')
+    .select('id')
+    .eq('benchmark_result_id', resultId)
+    .eq('file_path', filePath)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase.from('benchmark_evidence').update(payload).eq('id', existing.id);
+    if (error) {
+      throw new Error(error.message);
+    }
+    return;
+  }
+
+  const { error } = await supabase.from('benchmark_evidence').insert(payload);
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+function normalizeImportStatus(
+  rawStatus: string,
+  isAdmin: boolean
+): BenchmarkLifecycleStatus {
+  const normalized = (rawStatus.trim().toLowerCase() || 'draft') as BenchmarkLifecycleStatus;
+  const supportedStatuses: BenchmarkLifecycleStatus[] = ['draft', 'pending_review', 'published', 'archived'];
+
+  if (!supportedStatuses.includes(normalized)) {
+    throw new Error(`Unsupported status: ${rawStatus}`);
+  }
+
+  assertStatusTransitionAllowed(isAdmin, normalized);
+  return normalized;
+}
+
+function buildChipLookupMaps(chips: BenchmarkChipOption[]) {
+  const byId = new Map<string, BenchmarkChipOption>();
+  const byName = new Map<string, BenchmarkChipOption>();
+
+  for (const chip of chips) {
+    byId.set(`${chip.source}:${chip.id}`, chip);
+    const key = `${chip.source}:${chip.name.toLowerCase()}:${(chip.manufacturer ?? '').toLowerCase()}`;
+    byName.set(key, chip);
+  }
+
+  return { byId, byName };
+}
+
+function resolveImportChip(
+  row: ParsedBenchmarkImportRow,
+  chipMaps: ReturnType<typeof buildChipLookupMaps>
+) {
+  const chipId = parseOptionalText(row.chip_id);
+  const chipManufacturer = (parseOptionalText(row.chip_manufacturer) ?? '').toLowerCase();
+
+  if (chipId) {
+    const matchedById = chipMaps.byId.get(`${row.chip_source}:${chipId}`);
+    if (matchedById) {
+      return matchedById;
+    }
+  }
+
+  const chipName = parseOptionalText(row.chip_name);
+  if (!chipName) {
+    throw new Error('chip_id or chip_name is required.');
+  }
+
+  const matchedByName = chipMaps.byName.get(`${row.chip_source}:${chipName.toLowerCase()}:${chipManufacturer}`);
+  if (matchedByName) {
+    return matchedByName;
+  }
+
+  const looseMatches = [...chipMaps.byId.values()].filter(
+    (chip) =>
+      chip.source === row.chip_source &&
+      chip.name.toLowerCase() === chipName.toLowerCase() &&
+      (!chipManufacturer || (chip.manufacturer ?? '').toLowerCase() === chipManufacturer)
+  );
+
+  if (looseMatches.length === 1) {
+    return looseMatches[0];
+  }
+
+  if (looseMatches.length > 1) {
+    throw new Error(`Multiple chips matched "${chipName}". Please provide chip_id.`);
+  }
+
+  throw new Error(`Chip not found for source "${row.chip_source}" and name "${chipName}".`);
+}
+
+function requireChipManufacturerId(chip: BenchmarkChipOption) {
+  if (!chip.manufacturer_id) {
+    throw new Error(`Chip "${chip.name}" is missing manufacturer ownership metadata.`);
+  }
+
+  return chip.manufacturer_id;
+}
+
+export async function importBenchmarksAction(formData: FormData) {
+  const session = await requireConsoleSession();
+  const supabase = await createServerSupabaseClient();
+  const file = formData.get('csv_file');
+
+  if (!(file instanceof File) || file.size === 0) {
+    redirect('/console/benchmarks?error=Please upload a CSV file.');
+  }
+
+  try {
+    const csvText = await file.text();
+    const rows = parseBenchmarkImportCsv(csvText);
+    const chipOptions = await fetchBenchmarkChipOptions(session);
+    const chipMaps = buildChipLookupMaps(chipOptions);
+    const actorIsAdmin = session.profile.role === 'super_admin';
+
+    const prevalidatedRows = rows.map((row: ParsedBenchmarkImportRow) => {
+      const chip = resolveImportChip(row, chipMaps);
+      const status = normalizeImportStatus(row.status, actorIsAdmin);
+      return {
+        row,
+        chip,
+        status,
+      };
+    });
+
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    for (const entry of prevalidatedRows) {
+      const modelId = await resolveOrCreateModel(supabase, session.user.id, entry.row);
+      const variantId = await resolveOrCreateVariant(supabase, session.user.id, modelId, entry.row);
+      const scenarioId = await resolveOrCreateScenario(supabase, session.user.id, variantId, entry.row);
+      const result = await upsertBenchmarkResult(
+        supabase,
+        session.user.id,
+        {
+          id: entry.chip.id,
+          manufacturer_id: requireChipManufacturerId(entry.chip),
+          source: entry.chip.source,
+        },
+        scenarioId,
+        entry.status,
+        entry.row
+      );
+
+      await upsertBenchmarkEvidence(supabase, result.id, entry.row);
+
+      if (result.action === 'created') {
+        createdCount += 1;
+      } else {
+        updatedCount += 1;
+      }
+    }
+
+    revalidateBenchmarkRoutes();
+    redirect(
+      `/console/benchmarks?message=${encodeURIComponent(
+        `Imported ${rows.length} rows. Created ${createdCount}, updated ${updatedCount}.`
+      )}`
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to import benchmark CSV.';
+    redirect(`/console/benchmarks?error=${encodeURIComponent(message)}`);
   }
 }
 

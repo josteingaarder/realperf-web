@@ -1,0 +1,38 @@
+RealPerf Benchmark CSV Import Guide
+
+One CSV row equals one benchmark result entry.
+
+Required:
+- chip_source
+- chip_id or chip_name
+- model_name
+- model_category
+- variant_name
+- task_type
+- framework
+- metric_name
+- metric_unit
+- primary_value
+
+Recommended:
+- chip_manufacturer
+- precision
+- quantization
+- batch_size
+- sequence_length
+- input_shape
+- throughput
+- latency_ms_p50
+- power_watt
+- source_url
+- evidence_file_path
+
+Behavior:
+- The importer auto-creates models, variants, and scenarios when they do not exist yet.
+- The importer updates existing results when chip_source + chip_id + scenario already match.
+- Vendor accounts can only import draft or pending_review rows.
+- Admin accounts can also import published or archived rows.
+
+Tip:
+- Prefer chip_id to avoid name collisions.
+- Use the template file as the exact header source.
