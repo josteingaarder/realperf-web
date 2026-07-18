@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import SiteHeader from '@/components/SiteHeader';
-import { supabase } from '@/lib/supabase';
-
-export type BenchmarkCategory = 'vision' | 'speech' | 'llm';
+import BenchmarkResultsExplorer from '@/app/benchmark/BenchmarkResultsExplorer';
+import { fetchPublicBenchmarkRows, type BenchmarkCategory } from '@/lib/public-benchmarks';
 
 type BenchmarkCategoryConfig = {
   slug: BenchmarkCategory;
@@ -11,17 +10,6 @@ type BenchmarkCategoryConfig = {
   description: string;
   focus: string;
   emptyLabel: string;
-};
-
-type BenchmarkChipRow = {
-  id: string;
-  source: 'cloud' | 'edge';
-  href: string;
-  name: string;
-  manufacturer: string | null;
-  category: string | null;
-  primaryMetric: string;
-  modelCount: number;
 };
 
 export const benchmarkCategoryConfig: Record<BenchmarkCategory, BenchmarkCategoryConfig> = {
@@ -54,62 +42,13 @@ export const benchmarkCategoryConfig: Record<BenchmarkCategory, BenchmarkCategor
   },
 };
 
-function formatPrimaryMetric(
-  source: 'cloud' | 'edge',
-  values: { fp16_tflops?: number | null; ai_tops?: number | null }
-) {
-  if (source === 'edge') {
-    return values.ai_tops == null ? '—' : `${values.ai_tops.toLocaleString()} TOPS`;
-  }
-
-  return values.fp16_tflops == null ? '—' : `${values.fp16_tflops.toLocaleString()} TFLOPS`;
-}
-
-async function fetchBenchmarkRows(): Promise<BenchmarkChipRow[]> {
-  const [{ data: cloudChips }, { data: edgeChips }] = await Promise.all([
-    supabase
-      .from('cloud_chips')
-      .select('id,name,manufacturer,category,fp16_tflops')
-      .order('name', { ascending: true }),
-    supabase
-      .from('edge_chips')
-      .select('id,name,manufacturer,category,ai_tops')
-      .order('name', { ascending: true }),
-  ]);
-
-  const cloudRows: BenchmarkChipRow[] = (cloudChips ?? []).map((chip) => ({
-    id: chip.id,
-    source: 'cloud',
-    href: `/chips/${chip.id}`,
-    name: chip.name,
-    manufacturer: chip.manufacturer,
-    category: chip.category,
-    primaryMetric: formatPrimaryMetric('cloud', { fp16_tflops: chip.fp16_tflops }),
-    modelCount: 0,
-  }));
-
-  const edgeRows: BenchmarkChipRow[] = (edgeChips ?? []).map((chip) => ({
-    id: chip.id,
-    source: 'edge',
-    href: `/edge/${chip.id}`,
-    name: chip.name,
-    manufacturer: chip.manufacturer,
-    category: chip.category,
-    primaryMetric: formatPrimaryMetric('edge', { ai_tops: chip.ai_tops }),
-    modelCount: 0,
-  }));
-
-  return [...cloudRows, ...edgeRows];
-}
-
 export default async function BenchmarkCategoryPage({
   category,
 }: {
   category: BenchmarkCategory;
 }) {
   const config = benchmarkCategoryConfig[category];
-  const chips = await fetchBenchmarkRows();
-  const trackedModelCount = 0;
+  const rows = await fetchPublicBenchmarkRows(category);
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -127,20 +66,15 @@ export default async function BenchmarkCategoryPage({
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-5">{config.title}</h1>
           <p className="text-lg text-slate-400 max-w-3xl leading-relaxed mb-8">{config.description}</p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6">
               <div className="text-sm text-slate-500 mb-2">Benchmark Focus</div>
               <div className="text-lg font-semibold text-white">{config.focus}</div>
             </div>
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6">
-              <div className="text-sm text-slate-500 mb-2">Tracked Models</div>
-              <div className="text-3xl font-bold text-white">{trackedModelCount}</div>
-              <div className="text-sm text-slate-400 mt-2">No benchmark records yet</div>
-            </div>
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6">
-              <div className="text-sm text-slate-500 mb-2">Chips Listed</div>
-              <div className="text-3xl font-bold text-white">{chips.length}</div>
-              <div className="text-sm text-slate-400 mt-2">Cloud and Edge chips combined</div>
+              <div className="text-sm text-slate-500 mb-2">Published Result Rows</div>
+              <div className="text-3xl font-bold text-white">{rows.length}</div>
+              <div className="text-sm text-slate-400 mt-2">Model-linked results pulled from the new benchmark schema</div>
             </div>
           </div>
         </div>
@@ -148,49 +82,14 @@ export default async function BenchmarkCategoryPage({
 
       <section className="px-6 pb-20">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5">
-            <div className="text-sm font-medium text-amber-300 mb-1">Data status</div>
-            <p className="text-sm text-slate-300">
-              {config.emptyLabel} This page is already wired to the chip catalog so benchmark rows can be populated as
-              soon as model-level results are added to the database.
-            </p>
-          </div>
-
-          <div className="overflow-x-auto rounded-2xl border border-slate-800">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-slate-950">
-                  <th className="text-left p-4 text-slate-500 font-medium border-b border-slate-800">Chip</th>
-                  <th className="text-left p-4 text-slate-500 font-medium border-b border-slate-800">Segment</th>
-                  <th className="text-left p-4 text-slate-500 font-medium border-b border-slate-800">Manufacturer</th>
-                  <th className="text-left p-4 text-slate-500 font-medium border-b border-slate-800">Primary Metric</th>
-                  <th className="text-left p-4 text-slate-500 font-medium border-b border-slate-800">Models Tracked</th>
-                  <th className="text-left p-4 text-slate-500 font-medium border-b border-slate-800">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {chips.map((chip) => (
-                  <tr key={`${chip.source}:${chip.id}`} className="border-b border-slate-800/50 hover:bg-slate-900/30 transition">
-                    <td className="p-4">
-                      <Link href={chip.href} className="text-white font-medium hover:text-emerald-400 transition">
-                        {chip.name}
-                      </Link>
-                      <div className="text-xs text-slate-500 mt-1">{chip.category ?? '—'}</div>
-                    </td>
-                    <td className="p-4 text-slate-300">{chip.source === 'cloud' ? 'Cloud' : 'Edge'}</td>
-                    <td className="p-4 text-slate-300">{chip.manufacturer ?? '—'}</td>
-                    <td className="p-4 text-slate-300">{chip.primaryMetric}</td>
-                    <td className="p-4 text-slate-300">{chip.modelCount}</td>
-                    <td className="p-4">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-xs text-slate-400">
-                        Pending benchmark data
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {rows.length > 0 ? (
+            <BenchmarkResultsExplorer category={category} rows={rows} />
+          ) : (
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5">
+              <div className="text-sm font-medium text-amber-300 mb-1">Data status</div>
+              <p className="text-sm text-slate-300">{config.emptyLabel}</p>
+            </div>
+          )}
 
           <div className="mt-8 flex flex-wrap gap-4">
             <Link

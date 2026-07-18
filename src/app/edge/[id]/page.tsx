@@ -2,6 +2,16 @@ import Link from 'next/link';
 import SiteHeader from '@/components/SiteHeader';
 import { supabase } from '@/lib/supabase';
 import { serializeCompareItems } from '@/lib/storage';
+import ChipBenchmarkPanel from '@/components/ChipBenchmarkPanel';
+import { fetchPublicBenchmarkRowsForChip } from '@/lib/public-benchmarks';
+
+function getBenchmarkCategoryHref(category: string | null | undefined) {
+  if (category === 'vision' || category === 'speech' || category === 'llm') {
+    return `/benchmark/${category}`;
+  }
+
+  return undefined;
+}
 
 export default async function EdgeChipDetailPage(
   props: { params: Promise<{ id: string }> }
@@ -26,6 +36,7 @@ export default async function EdgeChipDetailPage(
     .from('edge_chips')
     .select('*')
     .eq('id', id)
+    .eq('status', 'published')
     .single();
 
   if (error || !chip) {
@@ -43,6 +54,7 @@ export default async function EdgeChipDetailPage(
 
   const perfPerDollar =
     chip.ai_tops && chip.price_usd ? (chip.ai_tops / chip.price_usd).toFixed(2) : null;
+  const benchmarks = await fetchPublicBenchmarkRowsForChip('edge', id);
 
   const specs = [
     { label: 'Manufacturer', value: chip.manufacturer || '—' },
@@ -109,6 +121,8 @@ export default async function EdgeChipDetailPage(
             </div>
           </div>
         )}
+
+        <ChipBenchmarkPanel rows={benchmarks} benchmarkCategoryHref={getBenchmarkCategoryHref(benchmarks[0]?.modelCategory)} />
 
         <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden mb-12">
           <div className="px-6 py-4 border-b border-slate-800 bg-slate-900/50">

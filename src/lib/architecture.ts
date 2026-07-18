@@ -164,11 +164,13 @@ export async function fetchArchitectureCards(): Promise<ArchitectureChipCard[]> 
     supabase
       .from('cloud_chips')
       .select('id,name,manufacturer,category,architecture,process_node,vram_gb,vram_type,fp16_tflops')
+      .eq('status', 'published')
       .order('manufacturer', { ascending: true })
       .order('name', { ascending: true }),
     supabase
       .from('edge_chips')
       .select('id,name,manufacturer,category,process_node,vram_gb,ai_tops')
+      .eq('status', 'published')
       .order('manufacturer', { ascending: true })
       .order('name', { ascending: true }),
   ]);
@@ -213,6 +215,7 @@ export async function fetchArchitectureProfile(
         'id,name,manufacturer,category,architecture,process_node,form_factor,cooling_type,vram_gb,vram_type,tdp_watt,fp16_tflops,interconnect_bandwidth_gb_s,supported_precisions,tensor_core_count'
       )
       .eq('id', id)
+      .eq('status', 'published')
       .single();
 
     if (!chip) {
@@ -271,6 +274,7 @@ export async function fetchArchitectureProfile(
     .from('edge_chips')
     .select('id,name,manufacturer,category,process_node,vram_gb,tdp_watt,ai_tops')
     .eq('id', id)
+    .eq('status', 'published')
     .single();
 
   if (!chip) {

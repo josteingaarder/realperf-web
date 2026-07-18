@@ -7,6 +7,7 @@ export default async function ChipsPage() {
   const { data: chips, error } = await supabase
     .from('cloud_chips')
     .select('*')
+    .eq('status', 'published')
     .order('fp16_tflops', { ascending: false });
 
   if (error || !chips) {

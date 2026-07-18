@@ -2,6 +2,16 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import SiteHeader from '@/components/SiteHeader';
 import { serializeCompareItems } from '@/lib/storage';
+import ChipBenchmarkPanel from '@/components/ChipBenchmarkPanel';
+import { fetchPublicBenchmarkRowsForChip } from '@/lib/public-benchmarks';
+
+function getBenchmarkCategoryHref(category: string | null | undefined) {
+  if (category === 'vision' || category === 'speech' || category === 'llm') {
+    return `/benchmark/${category}`;
+  }
+
+  return undefined;
+}
 
 export default async function ChipDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -22,6 +32,7 @@ export default async function ChipDetailPage(props: { params: Promise<{ id: stri
     .from('cloud_chips')
     .select('*')
     .eq('id', id)
+    .eq('status', 'published')
     .single();
 
   if (error || !chip) {
@@ -35,12 +46,7 @@ export default async function ChipDetailPage(props: { params: Promise<{ id: stri
     );
   }
 
-  // 查询 benchmark 数据
-  const { data: benchmarks } = await supabase
-    .from('benchmarks')
-    .select('*')
-    .eq('chip_id', id)
-    .order('benchmark_name');
+  const benchmarks = await fetchPublicBenchmarkRowsForChip('cloud', id);
 
   const perfPerDollar = chip.fp16_tflops && chip.price_usd 
     ? (chip.fp16_tflops / chip.price_usd).toFixed(2) 
@@ -120,30 +126,7 @@ export default async function ChipDetailPage(props: { params: Promise<{ id: stri
           </div>
         )}
 
-        {/* Benchmark 数据 */}
-        {benchmarks && benchmarks.length > 0 && (
-          <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden mb-12">
-            <div className="px-6 py-4 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Benchmark Results</h2>
-              <span className="text-xs text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-800">{benchmarks.length} tests</span>
-            </div>
-            <div className="divide-y divide-slate-800">
-              {benchmarks.map((b) => (
-                <div key={b.id} className="flex items-center justify-between px-6 py-4 hover:bg-slate-900/30 transition">
-                  <div>
-                    <div className="text-slate-200 font-medium text-sm">{b.benchmark_name}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">{b.metric_name}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-emerald-400 font-bold text-lg">
-                      {Number(b.score).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <ChipBenchmarkPanel rows={benchmarks} benchmarkCategoryHref={getBenchmarkCategoryHref(benchmarks[0]?.modelCategory)} />
 
         {/* 规格参数 */}
         <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden mb-12">

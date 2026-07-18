@@ -7,6 +7,7 @@ export default async function EdgePage() {
   const { data: chips, error } = await supabase
     .from('edge_chips')
     .select('*')
+    .eq('status', 'published')
     .order('ai_tops', { ascending: false });
 
   if (error || !chips) {

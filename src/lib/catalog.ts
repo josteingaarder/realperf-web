@@ -61,6 +61,7 @@ export async function fetchFavoriteChipCards(items: StoredChipRef[]) {
     const { data } = await supabase
       .from('cloud_chips')
       .select('id,name,manufacturer,category,fp16_tflops')
+      .eq('status', 'published')
       .in('id', cloudIds);
 
     cards.push(
@@ -81,6 +82,7 @@ export async function fetchFavoriteChipCards(items: StoredChipRef[]) {
     const { data } = await supabase
       .from('edge_chips')
       .select('id,name,manufacturer,category,ai_tops')
+      .eq('status', 'published')
       .in('id', edgeIds);
 
     cards.push(
@@ -109,6 +111,7 @@ export async function fetchCompareChips(items: StoredChipRef[]) {
     const { data } = await supabase
       .from('cloud_chips')
       .select('id,name,manufacturer,category,architecture,process_node,vram_gb,tdp_watt,fp16_tflops,fp32_tflops,price_usd')
+      .eq('status', 'published')
       .in('id', cloudIds);
 
     chips.push(
@@ -123,6 +126,7 @@ export async function fetchCompareChips(items: StoredChipRef[]) {
     const { data } = await supabase
       .from('edge_chips')
       .select('id,name,manufacturer,category,process_node,vram_gb,tdp_watt,ai_tops,price_usd')
+      .eq('status', 'published')
       .in('id', edgeIds);
 
     chips.push(

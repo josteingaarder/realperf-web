@@ -27,6 +27,7 @@ export default async function ChipOfTheDayPage() {
     .select(
       'id,name,manufacturer,category,architecture,vram_gb,tdp_watt,fp16_tflops,fp32_tflops,price_usd,process_node'
     )
+    .eq('status', 'published')
     .order('name', { ascending: true });
 
   if (error || !chips || chips.length === 0) {
