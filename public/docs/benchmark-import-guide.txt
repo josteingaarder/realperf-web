@@ -27,8 +27,15 @@ Recommended:
 - source_url
 - evidence_file_path
 
+Specialized scenario columns:
+- For llm rows: llm_request_mode, llm_input_tokens, llm_output_tokens, llm_concurrency, llm_requests_per_second_target, llm_prompt_template, llm_decoding_strategy, llm_notes
+- For vision rows: vision_task_subtype, vision_input_width, vision_input_height, vision_channels, vision_video_fps, vision_preprocessing, vision_postprocessing, vision_notes
+- For speech rows: speech_task_subtype, speech_audio_duration_sec, speech_sample_rate_hz, speech_streaming, speech_chunk_duration_ms, speech_language, speech_decoding_strategy, speech_notes
+- Leave columns for the other categories blank
+
 Behavior:
 - The importer auto-creates models, variants, and scenarios when they do not exist yet.
+- Specialized scenario rows are stored in llm_scenario_details, vision_scenario_details, or speech_scenario_details based on model_category.
 - The importer updates existing results when chip_source + chip_id + scenario already match.
 - Vendor accounts can only import draft or pending_review rows.
 - Admin accounts can also import published or archived rows.

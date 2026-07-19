@@ -1,6 +1,10 @@
+'use client';
+
+import { useMemo, useState } from 'react';
 import { changeBenchmarkStatusAction, deleteBenchmarkAction, saveBenchmarkAction } from '@/app/console/benchmarks/actions';
 import type { BenchmarkChipOption, ManagedModelOption } from '@/lib/benchmark-management';
 import type { AppRole } from '@/lib/console-auth';
+import { getSpecializedBenchmarkCategory } from '@/lib/benchmark-scenario-details';
 
 interface BenchmarkEditorFormProps {
   benchmark?: Record<string, unknown> | null;
@@ -32,8 +36,28 @@ export default function BenchmarkEditorForm({
   const scenario = benchmark?.scenario as Record<string, unknown> | undefined;
   const variant = scenario?.variant as Record<string, unknown> | undefined;
   const model = variant?.model as Record<string, unknown> | undefined;
+  const llmDetails = scenario?.llm_details as Record<string, unknown> | undefined;
+  const visionDetails = scenario?.vision_details as Record<string, unknown> | undefined;
+  const speechDetails = scenario?.speech_details as Record<string, unknown> | undefined;
   const evidence = Array.isArray(benchmark?.evidence) ? (benchmark?.evidence[0] as Record<string, unknown> | undefined) : undefined;
-  const chipSource = typeof benchmark?.chip_source === 'string' ? benchmark.chip_source : 'cloud';
+  const initialChipSource = typeof benchmark?.chip_source === 'string' ? benchmark.chip_source : 'cloud';
+  const initialChipId = typeof benchmark?.chip_id === 'string' ? benchmark.chip_id : '';
+  const initialModelId = typeof model?.id === 'string' ? model.id : '';
+  const [selectedChipSource, setSelectedChipSource] = useState<'cloud' | 'edge'>(
+    initialChipSource === 'edge' ? 'edge' : 'cloud'
+  );
+  const [selectedChipId, setSelectedChipId] = useState(initialChipId);
+  const [selectedModelId, setSelectedModelId] = useState(initialModelId);
+
+  const modelsById = useMemo(() => new Map(models.map((item) => [item.id, item])), [models]);
+  const selectedModelCategory = getSpecializedBenchmarkCategory(
+    (selectedModelId && modelsById.get(selectedModelId)?.category) ||
+      (typeof model?.category === 'string' ? model.category : null)
+  );
+  const filteredChips = useMemo(
+    () => chips.filter((chip) => chip.source === selectedChipSource),
+    [chips, selectedChipSource]
+  );
 
   return (
     <div className="space-y-6">
@@ -109,7 +133,15 @@ export default function BenchmarkEditorForm({
             <div className="mt-5 grid gap-5">
               <label className="block text-sm text-slate-300">
                 Chip Type
-                <select name="chip_source" defaultValue={chipSource} className={inputClassName()}>
+                <select
+                  name="chip_source"
+                  value={selectedChipSource}
+                  onChange={(event) => {
+                    setSelectedChipSource(event.target.value as 'cloud' | 'edge');
+                    setSelectedChipId('');
+                  }}
+                  className={inputClassName()}
+                >
                   <option value="cloud">Cloud</option>
                   <option value="edge">Edge</option>
                 </select>
@@ -118,11 +150,12 @@ export default function BenchmarkEditorForm({
                 Chip
                 <select
                   name="chip_id"
-                  defaultValue={typeof benchmark?.chip_id === 'string' ? benchmark.chip_id : ''}
+                  value={selectedChipId}
+                  onChange={(event) => setSelectedChipId(event.target.value)}
                   className={inputClassName()}
                 >
                   <option value="">Select a chip</option>
-                  {chips.map((chip) => (
+                  {filteredChips.map((chip) => (
                     <option key={`${chip.source}:${chip.id}`} value={chip.id}>
                       {chip.name} ({chip.source}, {chip.manufacturer ?? 'Unknown'})
                     </option>
@@ -157,7 +190,8 @@ export default function BenchmarkEditorForm({
                 Model
                 <select
                   name="model_id"
-                  defaultValue={typeof model?.id === 'string' ? model.id : ''}
+                  value={selectedModelId}
+                  onChange={(event) => setSelectedModelId(event.target.value)}
                   className={inputClassName()}
                 >
                   <option value="">Select a model</option>
@@ -168,6 +202,10 @@ export default function BenchmarkEditorForm({
                   ))}
                 </select>
               </label>
+              <div className="rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-300">
+                Specialized scenario mode:{' '}
+                <span className="font-semibold text-white">{selectedModelCategory ?? 'generic / unsupported'}</span>
+              </div>
               <label className="block text-sm text-slate-300">
                 Variant Name
                 <input
@@ -327,6 +365,225 @@ export default function BenchmarkEditorForm({
                 />
               </label>
             </div>
+
+            <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Specialized Scenario Details</div>
+              <div className="mt-4">
+                {selectedModelCategory === 'llm' ? (
+                  <ScenarioDetailsGrid>
+                    <Field label="Request Mode">
+                      <input
+                        name="llm_request_mode"
+                        defaultValue={typeof llmDetails?.request_mode === 'string' ? llmDetails.request_mode : ''}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Input Tokens">
+                      <input
+                        name="llm_input_tokens"
+                        inputMode="numeric"
+                        defaultValue={llmDetails?.input_tokens == null ? '' : String(llmDetails.input_tokens)}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Output Tokens">
+                      <input
+                        name="llm_output_tokens"
+                        inputMode="numeric"
+                        defaultValue={llmDetails?.output_tokens == null ? '' : String(llmDetails.output_tokens)}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Concurrency">
+                      <input
+                        name="llm_concurrency"
+                        inputMode="numeric"
+                        defaultValue={llmDetails?.concurrency == null ? '' : String(llmDetails.concurrency)}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Target RPS">
+                      <input
+                        name="llm_requests_per_second_target"
+                        inputMode="decimal"
+                        defaultValue={
+                          llmDetails?.requests_per_second_target == null ? '' : String(llmDetails.requests_per_second_target)
+                        }
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Decoding Strategy">
+                      <input
+                        name="llm_decoding_strategy"
+                        defaultValue={typeof llmDetails?.decoding_strategy === 'string' ? llmDetails.decoding_strategy : ''}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Prompt Template" fullWidth>
+                      <textarea
+                        name="llm_prompt_template"
+                        rows={3}
+                        defaultValue={typeof llmDetails?.prompt_template === 'string' ? llmDetails.prompt_template : ''}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="LLM Detail Notes" fullWidth>
+                      <textarea
+                        name="llm_notes"
+                        rows={3}
+                        defaultValue={typeof llmDetails?.notes === 'string' ? llmDetails.notes : ''}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                  </ScenarioDetailsGrid>
+                ) : null}
+
+                {selectedModelCategory === 'vision' ? (
+                  <ScenarioDetailsGrid>
+                    <Field label="Task Subtype">
+                      <input
+                        name="vision_task_subtype"
+                        defaultValue={typeof visionDetails?.task_subtype === 'string' ? visionDetails.task_subtype : ''}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Input Width">
+                      <input
+                        name="vision_input_width"
+                        inputMode="numeric"
+                        defaultValue={visionDetails?.input_width == null ? '' : String(visionDetails.input_width)}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Input Height">
+                      <input
+                        name="vision_input_height"
+                        inputMode="numeric"
+                        defaultValue={visionDetails?.input_height == null ? '' : String(visionDetails.input_height)}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Channels">
+                      <input
+                        name="vision_channels"
+                        inputMode="numeric"
+                        defaultValue={visionDetails?.channels == null ? '' : String(visionDetails.channels)}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Video FPS">
+                      <input
+                        name="vision_video_fps"
+                        inputMode="decimal"
+                        defaultValue={visionDetails?.video_fps == null ? '' : String(visionDetails.video_fps)}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Preprocessing">
+                      <input
+                        name="vision_preprocessing"
+                        defaultValue={typeof visionDetails?.preprocessing === 'string' ? visionDetails.preprocessing : ''}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Postprocessing">
+                      <input
+                        name="vision_postprocessing"
+                        defaultValue={typeof visionDetails?.postprocessing === 'string' ? visionDetails.postprocessing : ''}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Vision Detail Notes" fullWidth>
+                      <textarea
+                        name="vision_notes"
+                        rows={3}
+                        defaultValue={typeof visionDetails?.notes === 'string' ? visionDetails.notes : ''}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                  </ScenarioDetailsGrid>
+                ) : null}
+
+                {selectedModelCategory === 'speech' ? (
+                  <ScenarioDetailsGrid>
+                    <Field label="Task Subtype">
+                      <input
+                        name="speech_task_subtype"
+                        defaultValue={typeof speechDetails?.task_subtype === 'string' ? speechDetails.task_subtype : ''}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Audio Duration (s)">
+                      <input
+                        name="speech_audio_duration_sec"
+                        inputMode="decimal"
+                        defaultValue={speechDetails?.audio_duration_sec == null ? '' : String(speechDetails.audio_duration_sec)}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Sample Rate (Hz)">
+                      <input
+                        name="speech_sample_rate_hz"
+                        inputMode="numeric"
+                        defaultValue={speechDetails?.sample_rate_hz == null ? '' : String(speechDetails.sample_rate_hz)}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Streaming">
+                      <select
+                        name="speech_streaming"
+                        defaultValue={
+                          speechDetails?.streaming == null ? '' : speechDetails.streaming ? 'true' : 'false'
+                        }
+                        className={inputClassName()}
+                      >
+                        <option value="">Unspecified</option>
+                        <option value="true">True</option>
+                        <option value="false">False</option>
+                      </select>
+                    </Field>
+                    <Field label="Chunk Duration (ms)">
+                      <input
+                        name="speech_chunk_duration_ms"
+                        inputMode="numeric"
+                        defaultValue={speechDetails?.chunk_duration_ms == null ? '' : String(speechDetails.chunk_duration_ms)}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Language">
+                      <input
+                        name="speech_language"
+                        defaultValue={typeof speechDetails?.language === 'string' ? speechDetails.language : ''}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Decoding Strategy">
+                      <input
+                        name="speech_decoding_strategy"
+                        defaultValue={
+                          typeof speechDetails?.decoding_strategy === 'string' ? speechDetails.decoding_strategy : ''
+                        }
+                        className={inputClassName()}
+                      />
+                    </Field>
+                    <Field label="Speech Detail Notes" fullWidth>
+                      <textarea
+                        name="speech_notes"
+                        rows={3}
+                        defaultValue={typeof speechDetails?.notes === 'string' ? speechDetails.notes : ''}
+                        className={inputClassName()}
+                      />
+                    </Field>
+                  </ScenarioDetailsGrid>
+                ) : null}
+
+                {!selectedModelCategory ? (
+                  <div className="rounded-xl border border-dashed border-slate-700 px-4 py-4 text-sm text-slate-400">
+                    Select an `llm`, `vision`, or `speech` model to edit specialized scenario fields.
+                  </div>
+                ) : null}
+              </div>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6">
@@ -459,5 +716,26 @@ export default function BenchmarkEditorForm({
         </form>
       ) : null}
     </div>
+  );
+}
+
+function ScenarioDetailsGrid({ children }: { children: React.ReactNode }) {
+  return <div className="grid gap-5 md:grid-cols-2">{children}</div>;
+}
+
+function Field({
+  label,
+  fullWidth = false,
+  children,
+}: {
+  label: string;
+  fullWidth?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className={`block text-sm text-slate-300 ${fullWidth ? 'md:col-span-2' : ''}`}>
+      {label}
+      {children}
+    </label>
   );
 }

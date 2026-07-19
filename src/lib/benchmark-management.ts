@@ -222,6 +222,9 @@ export async function fetchBenchmarkForEdit(session: ConsoleSession, id: string)
       *,
       scenario:benchmark_scenarios (
         *,
+        llm_details:llm_scenario_details (*),
+        vision_details:vision_scenario_details (*),
+        speech_details:speech_scenario_details (*),
         variant:model_variants (
           *,
           model:models (*)
@@ -249,8 +252,20 @@ export async function fetchBenchmarkForEdit(session: ConsoleSession, id: string)
 
   if (normalized.scenario) {
     const scenarioVariant = firstRelation(normalized.scenario.variant);
+    const llmDetails = firstRelation(
+      (normalized.scenario as Record<string, unknown>).llm_details as Record<string, unknown> | Record<string, unknown>[] | null
+    );
+    const visionDetails = firstRelation(
+      (normalized.scenario as Record<string, unknown>).vision_details as Record<string, unknown> | Record<string, unknown>[] | null
+    );
+    const speechDetails = firstRelation(
+      (normalized.scenario as Record<string, unknown>).speech_details as Record<string, unknown> | Record<string, unknown>[] | null
+    );
     normalized.scenario = {
       ...normalized.scenario,
+      llm_details: llmDetails,
+      vision_details: visionDetails,
+      speech_details: speechDetails,
       variant: scenarioVariant
         ? {
             ...scenarioVariant,

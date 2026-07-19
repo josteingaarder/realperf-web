@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
 import { z } from 'zod';
+import { normalizeBooleanLike } from '@/lib/benchmark-scenario-details';
 
 export const BENCHMARK_IMPORT_HEADERS = [
   'chip_source',
@@ -42,6 +43,30 @@ export const BENCHMARK_IMPORT_HEADERS = [
   'evidence_title',
   'evidence_description',
   'status',
+  'llm_request_mode',
+  'llm_input_tokens',
+  'llm_output_tokens',
+  'llm_concurrency',
+  'llm_requests_per_second_target',
+  'llm_prompt_template',
+  'llm_decoding_strategy',
+  'llm_notes',
+  'vision_task_subtype',
+  'vision_input_width',
+  'vision_input_height',
+  'vision_channels',
+  'vision_video_fps',
+  'vision_preprocessing',
+  'vision_postprocessing',
+  'vision_notes',
+  'speech_task_subtype',
+  'speech_audio_duration_sec',
+  'speech_sample_rate_hz',
+  'speech_streaming',
+  'speech_chunk_duration_ms',
+  'speech_language',
+  'speech_decoding_strategy',
+  'speech_notes',
 ] as const;
 
 const benchmarkImportRowSchema = z.object({
@@ -85,6 +110,30 @@ const benchmarkImportRowSchema = z.object({
   evidence_title: z.string().trim().optional().default(''),
   evidence_description: z.string().trim().optional().default(''),
   status: z.string().trim().optional().default('draft'),
+  llm_request_mode: z.string().trim().optional().default(''),
+  llm_input_tokens: z.string().trim().optional().default(''),
+  llm_output_tokens: z.string().trim().optional().default(''),
+  llm_concurrency: z.string().trim().optional().default(''),
+  llm_requests_per_second_target: z.string().trim().optional().default(''),
+  llm_prompt_template: z.string().trim().optional().default(''),
+  llm_decoding_strategy: z.string().trim().optional().default(''),
+  llm_notes: z.string().trim().optional().default(''),
+  vision_task_subtype: z.string().trim().optional().default(''),
+  vision_input_width: z.string().trim().optional().default(''),
+  vision_input_height: z.string().trim().optional().default(''),
+  vision_channels: z.string().trim().optional().default(''),
+  vision_video_fps: z.string().trim().optional().default(''),
+  vision_preprocessing: z.string().trim().optional().default(''),
+  vision_postprocessing: z.string().trim().optional().default(''),
+  vision_notes: z.string().trim().optional().default(''),
+  speech_task_subtype: z.string().trim().optional().default(''),
+  speech_audio_duration_sec: z.string().trim().optional().default(''),
+  speech_sample_rate_hz: z.string().trim().optional().default(''),
+  speech_streaming: z.string().trim().optional().default(''),
+  speech_chunk_duration_ms: z.string().trim().optional().default(''),
+  speech_language: z.string().trim().optional().default(''),
+  speech_decoding_strategy: z.string().trim().optional().default(''),
+  speech_notes: z.string().trim().optional().default(''),
 });
 
 export type ParsedBenchmarkImportRow = z.infer<typeof benchmarkImportRowSchema> & {
@@ -163,4 +212,8 @@ export function parseOptionalDecimal(value: string) {
 
 export function parseOptionalText(value: string) {
   return value.trim() ? value.trim() : null;
+}
+
+export function parseOptionalBoolean(value: string) {
+  return normalizeBooleanLike(value);
 }

@@ -6,11 +6,19 @@ import { canManageManufacturer, requireConsoleSession } from '@/lib/console-auth
 import { fetchBenchmarkChipOptions, slugify, type BenchmarkChipOption } from '@/lib/benchmark-management';
 import {
   parseBenchmarkImportCsv,
+  parseOptionalBoolean,
   parseOptionalDecimal,
   parseOptionalInteger,
   parseOptionalText,
   type ParsedBenchmarkImportRow,
 } from '@/lib/benchmark-import';
+import {
+  getOtherScenarioDetailsTables,
+  getScenarioDetailsTable,
+  getSpecializedBenchmarkCategory,
+  normalizeBooleanLike,
+  type SpecializedScenarioDetailsInput,
+} from '@/lib/benchmark-scenario-details';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 type BenchmarkLifecycleStatus = 'draft' | 'pending_review' | 'published' | 'archived';
@@ -37,6 +45,10 @@ function asOptionalNumber(value: FormDataEntryValue | null) {
 function asOptionalInteger(value: FormDataEntryValue | null) {
   const parsed = asOptionalNumber(value);
   return parsed == null ? null : Math.trunc(parsed);
+}
+
+function asOptionalBoolean(value: FormDataEntryValue | null) {
+  return normalizeBooleanLike(value == null ? null : String(value));
 }
 
 function revalidateBenchmarkRoutes(resultId?: string, chipSource?: 'cloud' | 'edge', chipId?: string) {
@@ -156,8 +168,197 @@ async function resolveOrCreateVariant(
   return data.id;
 }
 
-function equalNullable(left: string | number | null | undefined, right: string | number | null | undefined) {
+function equalNullable(left: string | number | boolean | null | undefined, right: string | number | boolean | null | undefined) {
   return (left ?? null) === (right ?? null);
+}
+
+function firstRelation<T>(value: T | T[] | null | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+
+function buildScenarioDetailsFromImportRow(row: ParsedBenchmarkImportRow): SpecializedScenarioDetailsInput | null {
+  const category = getSpecializedBenchmarkCategory(row.model_category);
+
+  if (category === 'llm') {
+    return {
+      category,
+      values: {
+        request_mode: parseOptionalText(row.llm_request_mode),
+        input_tokens: parseOptionalInteger(row.llm_input_tokens),
+        output_tokens: parseOptionalInteger(row.llm_output_tokens),
+        concurrency: parseOptionalInteger(row.llm_concurrency),
+        requests_per_second_target: parseOptionalDecimal(row.llm_requests_per_second_target),
+        prompt_template: parseOptionalText(row.llm_prompt_template),
+        decoding_strategy: parseOptionalText(row.llm_decoding_strategy),
+        notes: parseOptionalText(row.llm_notes),
+      },
+    };
+  }
+
+  if (category === 'vision') {
+    return {
+      category,
+      values: {
+        task_subtype: parseOptionalText(row.vision_task_subtype),
+        input_width: parseOptionalInteger(row.vision_input_width),
+        input_height: parseOptionalInteger(row.vision_input_height),
+        channels: parseOptionalInteger(row.vision_channels),
+        video_fps: parseOptionalDecimal(row.vision_video_fps),
+        preprocessing: parseOptionalText(row.vision_preprocessing),
+        postprocessing: parseOptionalText(row.vision_postprocessing),
+        notes: parseOptionalText(row.vision_notes),
+      },
+    };
+  }
+
+  if (category === 'speech') {
+    return {
+      category,
+      values: {
+        task_subtype: parseOptionalText(row.speech_task_subtype),
+        audio_duration_sec: parseOptionalDecimal(row.speech_audio_duration_sec),
+        sample_rate_hz: parseOptionalInteger(row.speech_sample_rate_hz),
+        streaming: parseOptionalBoolean(row.speech_streaming),
+        chunk_duration_ms: parseOptionalInteger(row.speech_chunk_duration_ms),
+        language: parseOptionalText(row.speech_language),
+        decoding_strategy: parseOptionalText(row.speech_decoding_strategy),
+        notes: parseOptionalText(row.speech_notes),
+      },
+    };
+  }
+
+  return null;
+}
+
+function buildScenarioDetailsFromFormData(formData: FormData, modelCategory: string): SpecializedScenarioDetailsInput | null {
+  const category = getSpecializedBenchmarkCategory(modelCategory);
+
+  if (category === 'llm') {
+    return {
+      category,
+      values: {
+        request_mode: asOptionalString(formData.get('llm_request_mode')),
+        input_tokens: asOptionalInteger(formData.get('llm_input_tokens')),
+        output_tokens: asOptionalInteger(formData.get('llm_output_tokens')),
+        concurrency: asOptionalInteger(formData.get('llm_concurrency')),
+        requests_per_second_target: asOptionalNumber(formData.get('llm_requests_per_second_target')),
+        prompt_template: asOptionalString(formData.get('llm_prompt_template')),
+        decoding_strategy: asOptionalString(formData.get('llm_decoding_strategy')),
+        notes: asOptionalString(formData.get('llm_notes')),
+      },
+    };
+  }
+
+  if (category === 'vision') {
+    return {
+      category,
+      values: {
+        task_subtype: asOptionalString(formData.get('vision_task_subtype')),
+        input_width: asOptionalInteger(formData.get('vision_input_width')),
+        input_height: asOptionalInteger(formData.get('vision_input_height')),
+        channels: asOptionalInteger(formData.get('vision_channels')),
+        video_fps: asOptionalNumber(formData.get('vision_video_fps')),
+        preprocessing: asOptionalString(formData.get('vision_preprocessing')),
+        postprocessing: asOptionalString(formData.get('vision_postprocessing')),
+        notes: asOptionalString(formData.get('vision_notes')),
+      },
+    };
+  }
+
+  if (category === 'speech') {
+    return {
+      category,
+      values: {
+        task_subtype: asOptionalString(formData.get('speech_task_subtype')),
+        audio_duration_sec: asOptionalNumber(formData.get('speech_audio_duration_sec')),
+        sample_rate_hz: asOptionalInteger(formData.get('speech_sample_rate_hz')),
+        streaming: asOptionalBoolean(formData.get('speech_streaming')),
+        chunk_duration_ms: asOptionalInteger(formData.get('speech_chunk_duration_ms')),
+        language: asOptionalString(formData.get('speech_language')),
+        decoding_strategy: asOptionalString(formData.get('speech_decoding_strategy')),
+        notes: asOptionalString(formData.get('speech_notes')),
+      },
+    };
+  }
+
+  return null;
+}
+
+function candidateMatchesScenarioDetails(
+  candidate: Record<string, unknown>,
+  scenarioDetails: SpecializedScenarioDetailsInput | null
+) {
+  if (!scenarioDetails) {
+    return (
+      !firstRelation(candidate.llm_details as Record<string, unknown> | Record<string, unknown>[] | null) &&
+      !firstRelation(candidate.vision_details as Record<string, unknown> | Record<string, unknown>[] | null) &&
+      !firstRelation(candidate.speech_details as Record<string, unknown> | Record<string, unknown>[] | null)
+    );
+  }
+
+  const relationKey = `${scenarioDetails.category}_details` as 'llm_details' | 'vision_details' | 'speech_details';
+  const existingDetails = firstRelation(
+    candidate[relationKey] as Record<string, unknown> | Record<string, unknown>[] | null | undefined
+  );
+
+  if (!existingDetails) {
+    return false;
+  }
+
+  return Object.entries(scenarioDetails.values).every(([key, value]) =>
+    equalNullable(existingDetails[key] as string | number | boolean | null | undefined, value)
+  );
+}
+
+async function syncScenarioDetails(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  scenarioId: string,
+  scenarioDetails: SpecializedScenarioDetailsInput | null
+) {
+  if (!scenarioDetails) {
+    await Promise.all(
+      ['llm_scenario_details', 'vision_scenario_details', 'speech_scenario_details'].map((table) =>
+        supabase.from(table).delete().eq('scenario_id', scenarioId)
+      )
+    );
+    return;
+  }
+
+  await Promise.all(
+    getOtherScenarioDetailsTables(scenarioDetails.category).map((table) => supabase.from(table).delete().eq('scenario_id', scenarioId))
+  );
+
+  const table = getScenarioDetailsTable(scenarioDetails.category);
+  const { error } = await supabase
+    .from(table)
+    .upsert(
+      {
+        scenario_id: scenarioId,
+        ...scenarioDetails.values,
+      },
+      { onConflict: 'scenario_id' }
+    );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+async function fetchModelCategory(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  modelId: string
+) {
+  const { data, error } = await supabase.from('models').select('category').eq('id', modelId).single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? 'Model not found.');
+  }
+
+  return data.category as string;
 }
 
 async function resolveOrCreateScenario(
@@ -166,6 +367,7 @@ async function resolveOrCreateScenario(
   variantId: string,
   row: ParsedBenchmarkImportRow
 ) {
+  const scenarioDetails = buildScenarioDetailsFromImportRow(row);
   const payload = {
     model_variant_id: variantId,
     task_type: row.task_type,
@@ -183,7 +385,24 @@ async function resolveOrCreateScenario(
 
   const { data: candidates } = await supabase
     .from('benchmark_scenarios')
-    .select('id,batch_size,sequence_length,input_shape,dataset,framework,runtime,compiler,metric_name,metric_unit,task_type')
+    .select(
+      `
+      id,
+      batch_size,
+      sequence_length,
+      input_shape,
+      dataset,
+      framework,
+      runtime,
+      compiler,
+      metric_name,
+      metric_unit,
+      task_type,
+      llm_details:llm_scenario_details (*),
+      vision_details:vision_scenario_details (*),
+      speech_details:speech_scenario_details (*)
+    `
+    )
     .eq('model_variant_id', variantId)
     .eq('task_type', row.task_type)
     .eq('framework', row.framework)
@@ -197,7 +416,8 @@ async function resolveOrCreateScenario(
       equalNullable(candidate.input_shape, payload.input_shape) &&
       equalNullable(candidate.dataset, payload.dataset) &&
       equalNullable(candidate.runtime, payload.runtime) &&
-      equalNullable(candidate.compiler, payload.compiler)
+      equalNullable(candidate.compiler, payload.compiler) &&
+      candidateMatchesScenarioDetails(candidate as Record<string, unknown>, scenarioDetails)
     );
   });
 
@@ -206,6 +426,7 @@ async function resolveOrCreateScenario(
     if (error) {
       throw new Error(error.message);
     }
+    await syncScenarioDetails(supabase, existing.id, scenarioDetails);
     return existing.id;
   }
 
@@ -223,6 +444,7 @@ async function resolveOrCreateScenario(
     throw new Error(error?.message ?? 'Failed to create benchmark scenario.');
   }
 
+  await syncScenarioDetails(supabase, data.id, scenarioDetails);
   return data.id;
 }
 
@@ -508,6 +730,7 @@ export async function saveBenchmarkAction(formData: FormData) {
 
   try {
     const chip = await getManagedChip(session, chipSource, chipId);
+    const modelCategory = await fetchModelCategory(supabase, modelId);
 
     const variantPayload = {
       model_id: modelId,
@@ -545,6 +768,8 @@ export async function saveBenchmarkAction(formData: FormData) {
     if (!scenarioPayload.task_type || !scenarioPayload.framework || !scenarioPayload.metric_name || !scenarioPayload.metric_unit) {
       throw new Error('Task type, framework, metric name, and metric unit are required.');
     }
+
+    const scenarioDetails = buildScenarioDetailsFromFormData(formData, modelCategory);
 
     const resultPayload = {
       chip_source: chipSource,
@@ -619,6 +844,12 @@ export async function saveBenchmarkAction(formData: FormData) {
 
       scenarioId = data.id;
     }
+
+    if (!scenarioId) {
+      throw new Error('Failed to resolve benchmark scenario.');
+    }
+
+    await syncScenarioDetails(supabase, scenarioId, scenarioDetails);
 
     let savedResultId = resultId;
 

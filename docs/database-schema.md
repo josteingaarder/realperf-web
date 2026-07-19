@@ -60,7 +60,7 @@ Unique key: `(manufacturer_id, user_id)`.
 
 ## Core Catalog
 
-RealPerf currently keeps separate chip catalogs for cloud and edge accelerators. That structure remains in place, with governance columns added for publishing and ownership.
+RealPerf keeps separate chip catalogs for cloud and edge accelerators. That structure remains in place, with governance columns added for publishing and ownership. A unified read-only view provides cross-catalog access without forcing both domains into one wide table.
 
 ### `public.cloud_chips`
 
@@ -120,6 +120,33 @@ Core existing columns include:
 - `price_usd`
 
 New management columns mirror `cloud_chips`.
+
+### `public.chips_catalog_view`
+
+Read-only compatibility view across both chip catalogs.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `source` | `text` | `cloud` or `edge` |
+| `id` | `uuid` | Chip identifier |
+| `manufacturer_id` | `uuid` | FK to `manufacturers.id` |
+| `manufacturer` | `text` | Display manufacturer |
+| `name` | `text` | Chip name |
+| `category` | `text` | Chip category |
+| `architecture` | `text` | Present for cloud rows, null for edge rows |
+| `process_node` | `text` | Normalized process node |
+| `summary` | `text` | Admin summary |
+| `status` | `text` | Published lifecycle state |
+| `source_url` | `text` | Datasheet or source |
+| `primary_metric_key` | `text` | `fp16_tflops` or `ai_tops` |
+| `primary_metric_name` | `text` | Human-readable primary metric |
+| `primary_metric_value` | `numeric` | Primary metric value |
+| `primary_metric_unit` | `text` | `TFLOPS` or `TOPS` |
+| `memory_capacity_gb` | `numeric` | Unified memory capacity |
+| `power_watt` | `integer` | Unified power field |
+| `price_usd` | `numeric` | Optional list price |
+| `release_date` | `date` | Optional release date |
+| `spec_summary` | `jsonb` | Source-specific extra attributes |
 
 ## Benchmark Domain
 
@@ -184,6 +211,60 @@ Normalized test condition record.
 | `created_at` | `timestamp` | Default `now()` |
 | `updated_at` | `timestamp` | Default `now()` |
 
+### `public.llm_scenario_details`
+
+LLM-specific extension record stored one-to-one with `benchmark_scenarios`.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `scenario_id` | `uuid` | PK/FK to `benchmark_scenarios.id` |
+| `request_mode` | `text` | Offline, online, streaming, etc. |
+| `input_tokens` | `integer` | Input token count |
+| `output_tokens` | `integer` | Output token count |
+| `concurrency` | `integer` | Concurrent request count |
+| `requests_per_second_target` | `numeric` | Optional serving target |
+| `prompt_template` | `text` | Optional prompt profile |
+| `decoding_strategy` | `text` | Greedy, beam, sampling, etc. |
+| `notes` | `text` | Optional |
+| `created_at` | `timestamp` | Default `now()` |
+| `updated_at` | `timestamp` | Default `now()` |
+
+### `public.vision_scenario_details`
+
+Vision-specific extension record stored one-to-one with `benchmark_scenarios`.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `scenario_id` | `uuid` | PK/FK to `benchmark_scenarios.id` |
+| `task_subtype` | `text` | Classification, detection, segmentation, etc. |
+| `input_width` | `integer` | Input width in pixels |
+| `input_height` | `integer` | Input height in pixels |
+| `channels` | `integer` | Input channel count |
+| `video_fps` | `numeric` | Optional frame rate |
+| `preprocessing` | `text` | Optional preprocessing notes |
+| `postprocessing` | `text` | Optional postprocessing notes |
+| `notes` | `text` | Optional |
+| `created_at` | `timestamp` | Default `now()` |
+| `updated_at` | `timestamp` | Default `now()` |
+
+### `public.speech_scenario_details`
+
+Speech-specific extension record stored one-to-one with `benchmark_scenarios`.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `scenario_id` | `uuid` | PK/FK to `benchmark_scenarios.id` |
+| `task_subtype` | `text` | ASR, TTS, speaker ID, etc. |
+| `audio_duration_sec` | `numeric` | Audio duration |
+| `sample_rate_hz` | `integer` | Sample rate |
+| `streaming` | `boolean` | Streaming vs offline |
+| `chunk_duration_ms` | `integer` | Chunk size for streaming cases |
+| `language` | `text` | Spoken language |
+| `decoding_strategy` | `text` | Greedy, beam, CTC decode, etc. |
+| `notes` | `text` | Optional |
+| `created_at` | `timestamp` | Default `now()` |
+| `updated_at` | `timestamp` | Default `now()` |
+
 ### `public.benchmark_results`
 
 Concrete result tied to one chip and one scenario.
@@ -229,7 +310,7 @@ Supporting files and structured proof for benchmark results.
 
 ### `public.benchmarks`
 
-Legacy table kept during transition so existing pages keep working. It should receive the same lifecycle columns as chips:
+Legacy compatibility table retained temporarily for historical reads only. No new writes should target this table:
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -240,6 +321,11 @@ Legacy table kept during transition so existing pages keep working. It should re
 | `published_at` | `timestamp` | Optional |
 | `created_at` | `timestamp` | Default `now()` |
 | `updated_at` | `timestamp` | Default `now()` |
+| `lifecycle` | `text` | Always `legacy` |
+| `deprecated_at` | `timestamp` | Timestamp when legacy mode was enforced |
+| `legacy_notes` | `text` | Guidance to use `benchmark_results` instead |
+
+Operational rule: a database trigger blocks all inserts, updates, and deletes on `public.benchmarks`.
 
 ## Architecture Domain
 
