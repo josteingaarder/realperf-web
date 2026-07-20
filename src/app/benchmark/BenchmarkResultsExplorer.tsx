@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { BenchmarkCategory, PublicBenchmarkRow } from '@/lib/public-benchmarks';
 
 interface BenchmarkResultsExplorerProps {
@@ -9,10 +10,26 @@ interface BenchmarkResultsExplorerProps {
   rows: PublicBenchmarkRow[];
 }
 
+type FilterSection = 'core' | 'advanced';
+
+type FilterConfig = {
+  key: string;
+  label: string;
+  section: FilterSection;
+  getValue: (row: PublicBenchmarkRow) => string | null;
+};
+
 function getUniqueValues(values: Array<string | null | undefined>) {
-  return [...new Set(values.filter((value): value is string => Boolean(value && value.trim())))].sort((left, right) =>
-    left.localeCompare(right)
-  );
+  return [...new Set(values.filter((value): value is string => Boolean(value && value.trim())))].sort((left, right) => {
+    const leftNumber = Number(left);
+    const rightNumber = Number(right);
+
+    if (!Number.isNaN(leftNumber) && !Number.isNaN(rightNumber)) {
+      return leftNumber - rightNumber;
+    }
+
+    return left.localeCompare(right);
+  });
 }
 
 function formatValue(value: number | null, unit: string) {
@@ -21,6 +38,104 @@ function formatValue(value: number | null, unit: string) {
 
 function isLowerBetter(metricName: string) {
   return /latency|ttft|time/i.test(metricName);
+}
+
+function stringifyNumber(value: number | null | undefined, suffix = '') {
+  return value == null ? null : `${value}${suffix}`;
+}
+
+function stringifyBoolean(value: boolean | null | undefined, trueLabel: string, falseLabel: string) {
+  if (value == null) {
+    return null;
+  }
+
+  return value ? trueLabel : falseLabel;
+}
+
+function getVisionResolution(row: PublicBenchmarkRow) {
+  if (row.visionInputWidth != null && row.visionInputHeight != null) {
+    return `${row.visionInputWidth}x${row.visionInputHeight}`;
+  }
+
+  return row.inputResolution ?? row.inputShape ?? null;
+}
+
+function getSpeechDuration(row: PublicBenchmarkRow) {
+  if (row.speechAudioDurationSec != null) {
+    return `${row.speechAudioDurationSec}s`;
+  }
+
+  return row.inputShape ?? null;
+}
+
+function getCategoryFilterConfigs(category: BenchmarkCategory): FilterConfig[] {
+  if (category === 'llm') {
+    return [
+      { key: 'task', label: 'Task', section: 'core', getValue: (row) => row.taskType },
+      { key: 'requestMode', label: 'Request Mode', section: 'core', getValue: (row) => row.llmRequestMode },
+      { key: 'inputTokens', label: 'Input Tokens', section: 'core', getValue: (row) => stringifyNumber(row.llmInputTokens) },
+      { key: 'outputTokens', label: 'Output Tokens', section: 'core', getValue: (row) => stringifyNumber(row.llmOutputTokens) },
+      { key: 'batchSize', label: 'Batch Size', section: 'core', getValue: (row) => stringifyNumber(row.batchSize) },
+      { key: 'precision', label: 'Precision', section: 'core', getValue: (row) => row.precision },
+      { key: 'quantization', label: 'Quantization', section: 'core', getValue: (row) => row.quantization },
+      { key: 'framework', label: 'Framework', section: 'advanced', getValue: (row) => row.framework },
+      { key: 'runtime', label: 'Runtime', section: 'advanced', getValue: (row) => row.runtime },
+      { key: 'concurrency', label: 'Concurrency', section: 'advanced', getValue: (row) => stringifyNumber(row.llmConcurrency) },
+      { key: 'contextLength', label: 'Context Length', section: 'advanced', getValue: (row) => stringifyNumber(row.contextLength) },
+      { key: 'decoding', label: 'Decoding', section: 'advanced', getValue: (row) => row.llmDecodingStrategy },
+      {
+        key: 'rpsTarget',
+        label: 'Requests/s Target',
+        section: 'advanced',
+        getValue: (row) => stringifyNumber(row.llmRequestsPerSecondTarget),
+      },
+    ];
+  }
+
+  if (category === 'vision') {
+    return [
+      {
+        key: 'taskSubtype',
+        label: 'Task',
+        section: 'core',
+        getValue: (row) => row.visionTaskSubtype ?? row.taskType,
+      },
+      { key: 'resolution', label: 'Input Resolution', section: 'core', getValue: getVisionResolution },
+      { key: 'batchSize', label: 'Batch Size', section: 'core', getValue: (row) => stringifyNumber(row.batchSize) },
+      { key: 'precision', label: 'Precision', section: 'core', getValue: (row) => row.precision },
+      { key: 'quantization', label: 'Quantization', section: 'core', getValue: (row) => row.quantization },
+      { key: 'framework', label: 'Framework', section: 'core', getValue: (row) => row.framework },
+      { key: 'runtime', label: 'Runtime', section: 'advanced', getValue: (row) => row.runtime },
+      { key: 'videoFps', label: 'Input FPS', section: 'advanced', getValue: (row) => stringifyNumber(row.visionVideoFps) },
+      { key: 'channels', label: 'Channels', section: 'advanced', getValue: (row) => stringifyNumber(row.visionChannels) },
+      { key: 'dataset', label: 'Dataset', section: 'advanced', getValue: (row) => row.dataset },
+    ];
+  }
+
+  return [
+    {
+      key: 'taskSubtype',
+      label: 'Task',
+      section: 'core',
+      getValue: (row) => row.speechTaskSubtype ?? row.taskType,
+    },
+    {
+      key: 'streaming',
+      label: 'Mode',
+      section: 'core',
+      getValue: (row) => stringifyBoolean(row.speechStreaming, 'Streaming', 'Offline'),
+    },
+    { key: 'duration', label: 'Audio Duration', section: 'core', getValue: getSpeechDuration },
+    { key: 'sampleRate', label: 'Sample Rate', section: 'core', getValue: (row) => stringifyNumber(row.speechSampleRateHz, 'Hz') },
+    { key: 'precision', label: 'Precision', section: 'core', getValue: (row) => row.precision },
+    { key: 'quantization', label: 'Quantization', section: 'core', getValue: (row) => row.quantization },
+    { key: 'framework', label: 'Framework', section: 'core', getValue: (row) => row.framework },
+    { key: 'runtime', label: 'Runtime', section: 'advanced', getValue: (row) => row.runtime },
+    { key: 'chunk', label: 'Chunk Duration', section: 'advanced', getValue: (row) => stringifyNumber(row.speechChunkDurationMs, 'ms') },
+    { key: 'language', label: 'Language', section: 'advanced', getValue: (row) => row.speechLanguage },
+    { key: 'decoding', label: 'Decoding', section: 'advanced', getValue: (row) => row.speechDecodingStrategy },
+    { key: 'dataset', label: 'Dataset', section: 'advanced', getValue: (row) => row.dataset },
+  ];
 }
 
 function pushCondition(parts: string[], label: string, value: string | number | boolean | null | undefined) {
@@ -54,18 +169,14 @@ function buildScenarioConditions(row: PublicBenchmarkRow, category: BenchmarkCat
 
   if (category === 'vision') {
     pushCondition(parts, 'Subtype', row.visionTaskSubtype);
-    if (row.visionInputWidth != null && row.visionInputHeight != null) {
-      parts.push(`Input ${row.visionInputWidth}x${row.visionInputHeight}`);
-    } else {
-      pushCondition(parts, 'Input', row.inputResolution ?? row.inputShape);
-    }
+    pushCondition(parts, 'Input', getVisionResolution(row));
     pushCondition(parts, 'FPS', row.visionVideoFps);
     pushCondition(parts, 'Channels', row.visionChannels);
   }
 
   if (category === 'speech') {
     pushCondition(parts, 'Subtype', row.speechTaskSubtype);
-    pushCondition(parts, 'Audio', row.speechAudioDurationSec != null ? `${row.speechAudioDurationSec}s` : row.inputShape);
+    pushCondition(parts, 'Audio', getSpeechDuration(row));
     pushCondition(parts, 'Sample Rate', row.speechSampleRateHz != null ? `${row.speechSampleRateHz}Hz` : null);
     pushCondition(parts, 'Streaming', row.speechStreaming);
     pushCondition(parts, 'Chunk', row.speechChunkDurationMs != null ? `${row.speechChunkDurationMs}ms` : null);
@@ -88,7 +199,7 @@ function buildScenarioLabel(row: PublicBenchmarkRow, category: BenchmarkCategory
   const parts: string[] = [row.taskType];
 
   if (category === 'vision') {
-    parts.push(row.inputResolution ?? row.inputShape ?? `${row.visionInputWidth ?? '—'}x${row.visionInputHeight ?? '—'}`);
+    parts.push(getVisionResolution(row) ?? 'Default input');
     if (row.batchSize != null) {
       parts.push(`BS${row.batchSize}`);
     }
@@ -107,11 +218,7 @@ function buildScenarioLabel(row: PublicBenchmarkRow, category: BenchmarkCategory
     if (row.speechTaskSubtype) {
       parts.push(row.speechTaskSubtype);
     }
-    if (row.speechAudioDurationSec != null) {
-      parts.push(`${row.speechAudioDurationSec}s`);
-    } else if (row.inputShape) {
-      parts.push(row.inputShape);
-    }
+    parts.push(getSpeechDuration(row) ?? 'Default audio');
     if (row.precision) {
       parts.push(row.precision);
     }
@@ -148,11 +255,77 @@ function buildScenarioLabel(row: PublicBenchmarkRow, category: BenchmarkCategory
   return parts.filter(Boolean).join(' · ');
 }
 
+function filterMatches(row: PublicBenchmarkRow, config: FilterConfig, value: string | undefined) {
+  if (!value) {
+    return true;
+  }
+
+  return config.getValue(row) === value;
+}
+
+function fallbackCopyToClipboard(value: string) {
+  const textarea = document.createElement('textarea');
+  textarea.value = value;
+  textarea.setAttribute('readonly', 'true');
+  textarea.style.position = 'absolute';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    return document.execCommand('copy');
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
 export default function BenchmarkResultsExplorer({ category, rows }: BenchmarkResultsExplorerProps) {
-  const [chipSource, setChipSource] = useState<'all' | 'cloud' | 'edge'>('all');
-  const [selectedModelId, setSelectedModelId] = useState('');
-  const [selectedScenarioId, setSelectedScenarioId] = useState('');
-  const [selectedManufacturer, setSelectedManufacturer] = useState('all');
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
+
+  const filterConfigs = useMemo(() => getCategoryFilterConfigs(category), [category]);
+  const coreFilters = filterConfigs.filter((config) => config.section === 'core');
+  const advancedFilters = filterConfigs.filter((config) => config.section === 'advanced');
+
+  const selectedModelId = searchParams.get('model') ?? '';
+  const selectedScenarioId = searchParams.get('profile') ?? '';
+  const selectedManufacturer = searchParams.get('manufacturer') ?? 'all';
+  const selectedSegment = searchParams.get('segment');
+  const chipSource: 'all' | 'cloud' | 'edge' =
+    selectedSegment === 'cloud' || selectedSegment === 'edge' ? selectedSegment : 'all';
+  const selectedFilters = useMemo(
+    () =>
+      Object.fromEntries(
+        filterConfigs.flatMap((config) => {
+          const value = searchParams.get(`f_${config.key}`);
+          return value ? [[config.key, value]] : [];
+        })
+      ) as Record<string, string>,
+    [filterConfigs, searchParams]
+  );
+
+  const updateSearchParams = (mutator: (params: URLSearchParams) => void) => {
+    const params = new URLSearchParams(searchParams.toString());
+    mutator(params);
+    const nextQuery = params.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+  };
+  const sharePath = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
+
+  useEffect(() => {
+    if (copyState === 'idle') {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setCopyState('idle');
+    }, 2200);
+
+    return () => window.clearTimeout(timeout);
+  }, [copyState]);
 
   const modelOptions = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>();
@@ -175,24 +348,58 @@ export default function BenchmarkResultsExplorer({ category, rows }: BenchmarkRe
 
   const modelRows = useMemo(() => rows.filter((row) => row.modelId === activeModelId), [activeModelId, rows]);
 
-  const scenarioOptions = useMemo(() => {
-    const map = new Map<string, { id: string; label: string }>();
+  const scenarioRecords = useMemo(() => {
+    const map = new Map<string, PublicBenchmarkRow>();
 
     for (const row of modelRows) {
       if (!map.has(row.scenarioId)) {
-        map.set(row.scenarioId, {
-          id: row.scenarioId,
-          label: buildScenarioLabel(row, category),
-        });
+        map.set(row.scenarioId, row);
       }
     }
 
-    return [...map.values()].sort((left, right) => left.label.localeCompare(right.label));
-  }, [category, modelRows]);
+    return [...map.values()];
+  }, [modelRows]);
 
-  const activeScenarioId = scenarioOptions.some((option) => option.id === selectedScenarioId)
+  const filterOptions = useMemo(() => {
+    return Object.fromEntries(
+      filterConfigs.map((config) => {
+        const options = getUniqueValues(
+          scenarioRecords
+            .filter((row) =>
+              filterConfigs.every((otherConfig) => {
+                if (otherConfig.key === config.key) {
+                  return true;
+                }
+
+                return filterMatches(row, otherConfig, selectedFilters[otherConfig.key]);
+              })
+            )
+            .map((row) => config.getValue(row))
+        );
+
+        return [config.key, options];
+      })
+    ) as Record<string, string[]>;
+  }, [filterConfigs, scenarioRecords, selectedFilters]);
+
+  const matchingScenarioRecords = useMemo(() => {
+    return scenarioRecords.filter((row) =>
+      filterConfigs.every((config) => filterMatches(row, config, selectedFilters[config.key]))
+    );
+  }, [filterConfigs, scenarioRecords, selectedFilters]);
+
+  const resolvedScenarioOptions = useMemo(() => {
+    return matchingScenarioRecords
+      .map((row) => ({
+        id: row.scenarioId,
+        label: buildScenarioLabel(row, category),
+      }))
+      .sort((left, right) => left.label.localeCompare(right.label));
+  }, [category, matchingScenarioRecords]);
+
+  const activeScenarioId = resolvedScenarioOptions.some((option) => option.id === selectedScenarioId)
     ? selectedScenarioId
-    : (scenarioOptions[0]?.id ?? '');
+    : (resolvedScenarioOptions[0]?.id ?? '');
 
   const baseScenarioRows = useMemo(
     () => modelRows.filter((row) => row.scenarioId === activeScenarioId),
@@ -223,54 +430,127 @@ export default function BenchmarkResultsExplorer({ category, rows }: BenchmarkRe
     });
   }, [baseScenarioRows, chipSource, selectedManufacturer]);
 
-  const activeScenarioReference = comparisonRows[0] ?? baseScenarioRows[0] ?? modelRows[0] ?? null;
+  const activeScenarioReference = comparisonRows[0] ?? baseScenarioRows[0] ?? matchingScenarioRecords[0] ?? modelRows[0] ?? null;
   const trackedModels = modelOptions.length;
   const trackedChips = new Set(rows.map((row) => `${row.chipSource}:${row.chipId}`)).size;
   const comparableProfiles = new Set(rows.map((row) => row.scenarioId)).size;
   const scenarioConditions = activeScenarioReference ? buildScenarioConditions(activeScenarioReference, category) : [];
+  const selectedFilterBadges = filterConfigs
+    .map((config) => {
+      const value = selectedFilters[config.key];
+      return value ? `${config.label}: ${value}` : null;
+    })
+    .filter((value): value is string => Boolean(value));
+  const hasActiveAdvancedFilters = advancedFilters.some((config) => Boolean(selectedFilters[config.key]));
+
+  const handleFilterChange = (key: string, value: string) => {
+    updateSearchParams((params) => {
+      if (value) {
+        params.set(`f_${key}`, value);
+      } else {
+        params.delete(`f_${key}`);
+      }
+
+      params.delete('profile');
+      params.delete('manufacturer');
+    });
+  };
+
+  const resetFilters = () => {
+    updateSearchParams((params) => {
+      params.delete('profile');
+      params.delete('manufacturer');
+      params.delete('segment');
+      for (const config of filterConfigs) {
+        params.delete(`f_${config.key}`);
+      }
+    });
+  };
+
+  const handleCopyShareLink = async () => {
+    const shareUrl =
+      typeof window === 'undefined' ? sharePath : `${window.location.origin}${sharePath}`;
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else if (!fallbackCopyToClipboard(shareUrl)) {
+        throw new Error('Fallback copy failed');
+      }
+
+      setCopyState('copied');
+    } catch {
+      setCopyState(fallbackCopyToClipboard(shareUrl) ? 'copied' : 'error');
+    }
+  };
 
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
         <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6">
-          <div className="text-sm text-slate-500 mb-2">Tracked Models</div>
+          <div className="mb-2 text-sm text-slate-500">Tracked Models</div>
           <div className="text-3xl font-bold text-white">{trackedModels}</div>
           <div className="mt-2 text-sm text-slate-400">Published {category} models with active benchmark records</div>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6">
-          <div className="text-sm text-slate-500 mb-2">Comparable Profiles</div>
+          <div className="mb-2 text-sm text-slate-500">Comparable Profiles</div>
           <div className="text-3xl font-bold text-white">{comparableProfiles}</div>
-          <div className="mt-2 text-sm text-slate-400">Each profile represents one model under one shared test condition</div>
+          <div className="mt-2 text-sm text-slate-400">Core filters resolve into one shared benchmark profile before table rendering</div>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6">
-          <div className="text-sm text-slate-500 mb-2">Chips Covered</div>
+          <div className="mb-2 text-sm text-slate-500">Chips Covered</div>
           <div className="text-3xl font-bold text-white">{trackedChips}</div>
           <div className="mt-2 text-sm text-slate-400">Cloud and edge accelerators with published benchmark results</div>
         </div>
       </div>
 
       <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="text-sm font-medium text-slate-300">Comparison controls</div>
             <p className="mt-1 text-sm text-slate-500">
-              Select one model and one test profile, then compare all chips under the same benchmark condition.
+              Pick one model, refine high-frequency conditions in the core area, then use advanced filters only when you need deeper control.
             </p>
           </div>
-          <div className="rounded-full border border-slate-800 bg-black/40 px-4 py-2 text-sm text-slate-400">
-            Comparing {comparisonRows.length} chip results
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-full border border-slate-800 bg-black/40 px-4 py-2 text-sm text-slate-400">
+              Matching profiles {resolvedScenarioOptions.length}
+            </div>
+            <button
+              type="button"
+              onClick={handleCopyShareLink}
+              className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300 transition hover:border-emerald-400 hover:text-emerald-200"
+            >
+              {copyState === 'copied'
+                ? 'Link copied'
+                : copyState === 'error'
+                  ? 'Copy failed'
+                  : 'Copy Share Link'}
+            </button>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="rounded-full border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-emerald-500 hover:text-white"
+            >
+              Reset filters
+            </button>
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <label className="block text-sm text-slate-300">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <label className="block text-sm text-slate-300 xl:col-span-3">
             Model
             <select
               value={activeModelId}
               onChange={(event) => {
-                setSelectedModelId(event.target.value);
-                setSelectedScenarioId('');
-                setSelectedManufacturer('all');
+                updateSearchParams((params) => {
+                  params.set('model', event.target.value);
+                  params.delete('profile');
+                  params.delete('manufacturer');
+                  for (const config of filterConfigs) {
+                    params.delete(`f_${config.key}`);
+                  }
+                });
               }}
               className="mt-2 w-full rounded-xl border border-slate-800 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-emerald-500"
             >
@@ -281,30 +561,108 @@ export default function BenchmarkResultsExplorer({ category, rows }: BenchmarkRe
               ))}
             </select>
           </label>
+        </div>
 
-          <label className="block text-sm text-slate-300">
-            Test Profile
-            <select
-              value={activeScenarioId}
-              onChange={(event) => {
-                setSelectedScenarioId(event.target.value);
-                setSelectedManufacturer('all');
-              }}
-              className="mt-2 w-full rounded-xl border border-slate-800 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-emerald-500"
+        <div className="mt-6">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">Core Conditions</div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {coreFilters.map((config) => (
+              <label key={config.key} className="block text-sm text-slate-300">
+                {config.label}
+                <select
+                  value={selectedFilters[config.key] ?? ''}
+                  onChange={(event) => handleFilterChange(config.key, event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-800 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-emerald-500"
+                >
+                  <option value="">All</option>
+                  {(filterOptions[config.key] ?? []).map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-slate-800 bg-black/20 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-medium text-white">Advanced Conditions</div>
+              <p className="mt-1 text-sm text-slate-500">
+                Expose lower-frequency benchmark knobs without crowding the default comparison flow.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((current) => !current)}
+              className="rounded-full border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-emerald-500 hover:text-white"
             >
-              {scenarioOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
+              {showAdvanced ? 'Hide advanced' : 'Show advanced'}
+            </button>
+          </div>
+
+          {showAdvanced || hasActiveAdvancedFilters ? (
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {advancedFilters.map((config) => (
+                <label key={config.key} className="block text-sm text-slate-300">
+                  {config.label}
+                  <select
+                    value={selectedFilters[config.key] ?? ''}
+                    onChange={(event) => handleFilterChange(config.key, event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-slate-800 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-emerald-500"
+                  >
+                    <option value="">All</option>
+                    {(filterOptions[config.key] ?? []).map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               ))}
-            </select>
-          </label>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {resolvedScenarioOptions.length > 1 ? (
+            <label className="block text-sm text-slate-300 xl:col-span-3">
+              Resolved Profile
+              <select
+                value={activeScenarioId}
+                onChange={(event) => {
+                  updateSearchParams((params) => {
+                    params.set('profile', event.target.value);
+                    params.delete('manufacturer');
+                  });
+                }}
+                className="mt-2 w-full rounded-xl border border-slate-800 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-emerald-500"
+              >
+                {resolvedScenarioOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
 
           <label className="block text-sm text-slate-300">
             Segment
             <select
               value={chipSource}
-              onChange={(event) => setChipSource(event.target.value as 'all' | 'cloud' | 'edge')}
+              onChange={(event) => {
+                updateSearchParams((params) => {
+                  const nextValue = event.target.value as 'all' | 'cloud' | 'edge';
+                  if (nextValue === 'all') {
+                    params.delete('segment');
+                  } else {
+                    params.set('segment', nextValue);
+                  }
+                });
+              }}
               className="mt-2 w-full rounded-xl border border-slate-800 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-emerald-500"
             >
               <option value="all">All</option>
@@ -317,7 +675,15 @@ export default function BenchmarkResultsExplorer({ category, rows }: BenchmarkRe
             Manufacturer
             <select
               value={selectedManufacturer}
-              onChange={(event) => setSelectedManufacturer(event.target.value)}
+              onChange={(event) => {
+                updateSearchParams((params) => {
+                  if (event.target.value === 'all') {
+                    params.delete('manufacturer');
+                  } else {
+                    params.set('manufacturer', event.target.value);
+                  }
+                });
+              }}
               className="mt-2 w-full rounded-xl border border-slate-800 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-emerald-500"
             >
               <option value="all">All</option>
@@ -328,6 +694,10 @@ export default function BenchmarkResultsExplorer({ category, rows }: BenchmarkRe
               ))}
             </select>
           </label>
+
+          <div className="rounded-xl border border-slate-800 bg-black/30 px-4 py-3 text-sm text-slate-400">
+            Comparing {comparisonRows.length} chip results
+          </div>
         </div>
       </div>
 
@@ -349,11 +719,15 @@ export default function BenchmarkResultsExplorer({ category, rows }: BenchmarkRe
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">
+              {selectedFilterBadges.length > 0
+                ? selectedFilterBadges.map((badge) => (
+                    <span key={badge} className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
+                      {badge}
+                    </span>
+                  ))
+                : null}
               {scenarioConditions.map((condition) => (
-                <span
-                  key={condition}
-                  className="rounded-full border border-slate-700 bg-black/30 px-3 py-1 text-xs text-slate-300"
-                >
+                <span key={condition} className="rounded-full border border-slate-700 bg-black/30 px-3 py-1 text-xs text-slate-300">
                   {condition}
                 </span>
               ))}
@@ -416,7 +790,7 @@ export default function BenchmarkResultsExplorer({ category, rows }: BenchmarkRe
         <div className="rounded-2xl border border-slate-800 bg-slate-950 p-10 text-center">
           <div className="text-lg font-semibold text-white">No comparable results are available</div>
           <p className="mt-3 text-sm text-slate-400">
-            Try selecting another model, test profile, or widening the selected chip segment.
+            Try widening the selected conditions or reset the current filters to reopen more benchmark profiles.
           </p>
         </div>
       )}

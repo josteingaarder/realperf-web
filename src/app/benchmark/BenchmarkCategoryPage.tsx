@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import SiteHeader from '@/components/SiteHeader';
 import BenchmarkResultsExplorer from '@/app/benchmark/BenchmarkResultsExplorer';
@@ -87,7 +88,15 @@ export default async function BenchmarkCategoryPage({
       <section className="px-6 pb-20">
         <div className="max-w-6xl mx-auto">
           {rows.length > 0 ? (
-            <BenchmarkResultsExplorer category={category} rows={rows} />
+            <Suspense
+              fallback={
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 text-sm text-slate-400">
+                  Loading benchmark controls...
+                </div>
+              }
+            >
+              <BenchmarkResultsExplorer category={category} rows={rows} />
+            </Suspense>
           ) : (
             <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5">
               <div className="text-sm font-medium text-amber-300 mb-1">Data status</div>
