@@ -49,6 +49,8 @@ export default async function BenchmarkCategoryPage({
 }) {
   const config = benchmarkCategoryConfig[category];
   const rows = await fetchPublicBenchmarkRows(category);
+  const trackedModels = new Set(rows.map((row) => row.modelId).filter(Boolean)).size;
+  const comparableProfiles = new Set(rows.map((row) => row.scenarioId)).size;
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -72,9 +74,11 @@ export default async function BenchmarkCategoryPage({
               <div className="text-lg font-semibold text-white">{config.focus}</div>
             </div>
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6">
-              <div className="text-sm text-slate-500 mb-2">Published Result Rows</div>
-              <div className="text-3xl font-bold text-white">{rows.length}</div>
-              <div className="text-sm text-slate-400 mt-2">Model-linked results pulled from the new benchmark schema</div>
+              <div className="text-sm text-slate-500 mb-2">Comparison Coverage</div>
+              <div className="text-3xl font-bold text-white">
+                {trackedModels} models / {comparableProfiles} profiles
+              </div>
+              <div className="text-sm text-slate-400 mt-2">Choose one model and one shared test condition to compare chips side by side</div>
             </div>
           </div>
         </div>

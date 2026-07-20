@@ -1,23 +1,27 @@
 import Link from 'next/link';
+import { fetchPublishedModelCountsByCategory } from '@/lib/public-benchmarks';
 
 export default async function StatsCards() {
-  const trackedModelCount = 0;
+  const trackedModelCounts = await fetchPublishedModelCountsByCategory();
 
   const cards = [
     {
       title: 'Vision',
       href: '/benchmark/vision',
       accent: 'Computer vision and multimodal image workloads',
+      trackedModelCount: trackedModelCounts.vision,
     },
     {
       title: 'Speech',
       href: '/benchmark/speech',
       accent: 'ASR, TTS, and real-time audio inference',
+      trackedModelCount: trackedModelCounts.speech,
     },
     {
       title: 'LLM',
       href: '/benchmark/llm',
       accent: 'Prompt throughput, latency, and memory fit',
+      trackedModelCount: trackedModelCounts.llm,
     },
   ];
 
@@ -32,7 +36,7 @@ export default async function StatsCards() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.14),transparent_58%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative flex min-h-[170px] flex-col items-center justify-center">
             <div className="text-[2rem] font-bold tracking-tight text-white">{card.title}</div>
-            <div className="mt-4 text-sm font-medium text-emerald-400">{trackedModelCount} models tracked</div>
+            <div className="mt-4 text-sm font-medium text-emerald-400">{card.trackedModelCount} models tracked</div>
             <div className="mt-6 max-w-[15rem] text-base leading-7 text-slate-400">{card.accent}</div>
           </div>
         </Link>

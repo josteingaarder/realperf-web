@@ -2,9 +2,12 @@ import { supabase } from '@/lib/supabase';
 
 export type BenchmarkCategory = 'vision' | 'speech' | 'llm';
 export type BenchmarkChipSource = 'cloud' | 'edge';
+export type BenchmarkModelCounts = Record<BenchmarkCategory, number>;
 
 export interface PublicBenchmarkRow {
   id: string;
+  scenarioId: string;
+  variantId: string | null;
   chipSource: BenchmarkChipSource;
   chipId: string;
   chipHref: string;
@@ -40,6 +43,24 @@ export interface PublicBenchmarkRow {
   memoryGb: number | null;
   sourceUrl: string | null;
   notes: string | null;
+  llmRequestMode: string | null;
+  llmInputTokens: number | null;
+  llmOutputTokens: number | null;
+  llmConcurrency: number | null;
+  llmRequestsPerSecondTarget: number | null;
+  llmDecodingStrategy: string | null;
+  visionTaskSubtype: string | null;
+  visionInputWidth: number | null;
+  visionInputHeight: number | null;
+  visionChannels: number | null;
+  visionVideoFps: number | null;
+  speechTaskSubtype: string | null;
+  speechAudioDurationSec: number | null;
+  speechSampleRateHz: number | null;
+  speechStreaming: boolean | null;
+  speechChunkDurationMs: number | null;
+  speechLanguage: string | null;
+  speechDecodingStrategy: string | null;
 }
 
 interface PublicBenchmarkResultQueryRow {
@@ -59,6 +80,7 @@ interface PublicBenchmarkResultQueryRow {
 }
 
 interface PublicBenchmarkScenarioQueryRow {
+  id: string;
   task_type: string;
   batch_size: number | null;
   sequence_length: number | null;
@@ -69,10 +91,14 @@ interface PublicBenchmarkScenarioQueryRow {
   compiler: string | null;
   metric_name: string;
   metric_unit: string;
+  llm_details: PublicLlmScenarioDetailsQueryRow | PublicLlmScenarioDetailsQueryRow[] | null;
+  vision_details: PublicVisionScenarioDetailsQueryRow | PublicVisionScenarioDetailsQueryRow[] | null;
+  speech_details: PublicSpeechScenarioDetailsQueryRow | PublicSpeechScenarioDetailsQueryRow[] | null;
   variant: PublicBenchmarkVariantQueryRow | PublicBenchmarkVariantQueryRow[] | null;
 }
 
 interface PublicBenchmarkVariantQueryRow {
+  id: string;
   name: string;
   precision: string | null;
   quantization: string | null;
@@ -86,6 +112,33 @@ interface PublicBenchmarkModelQueryRow {
   name: string;
   vendor: string | null;
   category: string | null;
+}
+
+interface PublicLlmScenarioDetailsQueryRow {
+  request_mode: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  concurrency: number | null;
+  requests_per_second_target: number | null;
+  decoding_strategy: string | null;
+}
+
+interface PublicVisionScenarioDetailsQueryRow {
+  task_subtype: string | null;
+  input_width: number | null;
+  input_height: number | null;
+  channels: number | null;
+  video_fps: number | null;
+}
+
+interface PublicSpeechScenarioDetailsQueryRow {
+  task_subtype: string | null;
+  audio_duration_sec: number | null;
+  sample_rate_hz: number | null;
+  streaming: boolean | null;
+  chunk_duration_ms: number | null;
+  language: string | null;
+  decoding_strategy: string | null;
 }
 
 interface PublicChipLookupRow {
@@ -103,6 +156,10 @@ function firstRelation<T>(value: T | T[] | null | undefined) {
   }
 
   return value ?? null;
+}
+
+function asBenchmarkCategory(value: string | null | undefined): BenchmarkCategory | null {
+  return value === 'vision' || value === 'speech' || value === 'llm' ? value : null;
 }
 
 function formatChipPrimaryMetric(source: BenchmarkChipSource, chip: PublicChipLookupRow) {
@@ -151,10 +208,15 @@ function toPublicBenchmarkRow(row: PublicBenchmarkResultQueryRow, chipMap: Map<s
   const scenario = firstRelation(row.scenario);
   const variant = firstRelation(scenario?.variant);
   const model = firstRelation(variant?.model);
+  const llmDetails = firstRelation(scenario?.llm_details);
+  const visionDetails = firstRelation(scenario?.vision_details);
+  const speechDetails = firstRelation(scenario?.speech_details);
   const chip = chipMap.get(`${row.chip_source}:${row.chip_id}`);
 
   return {
     id: row.id,
+    scenarioId: scenario?.id ?? row.id,
+    variantId: variant?.id ?? null,
     chipSource: row.chip_source,
     chipId: row.chip_id,
     chipHref: row.chip_source === 'cloud' ? `/chips/${row.chip_id}` : `/edge/${row.chip_id}`,
@@ -190,7 +252,48 @@ function toPublicBenchmarkRow(row: PublicBenchmarkResultQueryRow, chipMap: Map<s
     memoryGb: row.memory_gb,
     sourceUrl: row.source_url,
     notes: row.notes,
+    llmRequestMode: llmDetails?.request_mode ?? null,
+    llmInputTokens: llmDetails?.input_tokens ?? null,
+    llmOutputTokens: llmDetails?.output_tokens ?? null,
+    llmConcurrency: llmDetails?.concurrency ?? null,
+    llmRequestsPerSecondTarget: llmDetails?.requests_per_second_target ?? null,
+    llmDecodingStrategy: llmDetails?.decoding_strategy ?? null,
+    visionTaskSubtype: visionDetails?.task_subtype ?? null,
+    visionInputWidth: visionDetails?.input_width ?? null,
+    visionInputHeight: visionDetails?.input_height ?? null,
+    visionChannels: visionDetails?.channels ?? null,
+    visionVideoFps: visionDetails?.video_fps ?? null,
+    speechTaskSubtype: speechDetails?.task_subtype ?? null,
+    speechAudioDurationSec: speechDetails?.audio_duration_sec ?? null,
+    speechSampleRateHz: speechDetails?.sample_rate_hz ?? null,
+    speechStreaming: speechDetails?.streaming ?? null,
+    speechChunkDurationMs: speechDetails?.chunk_duration_ms ?? null,
+    speechLanguage: speechDetails?.language ?? null,
+    speechDecodingStrategy: speechDetails?.decoding_strategy ?? null,
   } satisfies PublicBenchmarkRow;
+}
+
+export async function fetchPublishedModelCountsByCategory(): Promise<BenchmarkModelCounts> {
+  const counts: BenchmarkModelCounts = {
+    vision: 0,
+    speech: 0,
+    llm: 0,
+  };
+
+  const { data } = await supabase
+    .from('models')
+    .select('category')
+    .eq('status', 'published')
+    .in('category', ['vision', 'speech', 'llm']);
+
+  for (const model of data ?? []) {
+    const category = asBenchmarkCategory(model.category);
+    if (category) {
+      counts[category] += 1;
+    }
+  }
+
+  return counts;
 }
 
 export async function fetchPublicBenchmarkRows(category: BenchmarkCategory): Promise<PublicBenchmarkRow[]> {
@@ -211,6 +314,7 @@ export async function fetchPublicBenchmarkRows(category: BenchmarkCategory): Pro
       source_url,
       notes,
       scenario:benchmark_scenarios (
+        id,
         task_type,
         batch_size,
         sequence_length,
@@ -221,7 +325,32 @@ export async function fetchPublicBenchmarkRows(category: BenchmarkCategory): Pro
         compiler,
         metric_name,
         metric_unit,
+        llm_details:llm_scenario_details (
+          request_mode,
+          input_tokens,
+          output_tokens,
+          concurrency,
+          requests_per_second_target,
+          decoding_strategy
+        ),
+        vision_details:vision_scenario_details (
+          task_subtype,
+          input_width,
+          input_height,
+          channels,
+          video_fps
+        ),
+        speech_details:speech_scenario_details (
+          task_subtype,
+          audio_duration_sec,
+          sample_rate_hz,
+          streaming,
+          chunk_duration_ms,
+          language,
+          decoding_strategy
+        ),
         variant:model_variants (
+          id,
           name,
           precision,
           quantization,
@@ -272,6 +401,7 @@ export async function fetchPublicBenchmarkRowsForChip(
       source_url,
       notes,
       scenario:benchmark_scenarios (
+        id,
         task_type,
         batch_size,
         sequence_length,
@@ -282,7 +412,32 @@ export async function fetchPublicBenchmarkRowsForChip(
         compiler,
         metric_name,
         metric_unit,
+        llm_details:llm_scenario_details (
+          request_mode,
+          input_tokens,
+          output_tokens,
+          concurrency,
+          requests_per_second_target,
+          decoding_strategy
+        ),
+        vision_details:vision_scenario_details (
+          task_subtype,
+          input_width,
+          input_height,
+          channels,
+          video_fps
+        ),
+        speech_details:speech_scenario_details (
+          task_subtype,
+          audio_duration_sec,
+          sample_rate_hz,
+          streaming,
+          chunk_duration_ms,
+          language,
+          decoding_strategy
+        ),
         variant:model_variants (
+          id,
           name,
           precision,
           quantization,
