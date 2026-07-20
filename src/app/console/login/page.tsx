@@ -189,6 +189,13 @@ export default async function ConsoleLoginPage(props: {
                     </button>
                   </form>
 
+                  <div className="mt-4 text-center text-sm text-slate-400">
+                    No account yet?{' '}
+                    <Link href="#request-access" className="font-medium text-emerald-400 transition hover:text-emerald-300">
+                      Create one below
+                    </Link>
+                  </div>
+
                   <div className="mt-5 grid gap-4 border-t border-slate-800 pt-5 md:grid-cols-2">
                     <form action={requestPasswordResetAction} className="space-y-3 rounded-2xl border border-slate-800 bg-black/30 p-4">
                       <div>
@@ -232,7 +239,7 @@ export default async function ConsoleLoginPage(props: {
                   </div>
                 </div>
 
-                <div className="border-t border-slate-800 pt-6">
+                <div id="request-access" className="border-t border-slate-800 pt-6 scroll-mt-28">
                   <h3 className="text-lg font-semibold text-white">
                     {invite ? 'Accept Invitation' : 'Request Access'}
                   </h3>

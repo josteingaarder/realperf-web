@@ -10,6 +10,7 @@ interface HeaderLink {
 interface SiteHeaderProps {
   activeSection?: NavSection;
   cta?: HeaderLink;
+  actionLink?: HeaderLink;
   secondaryLink?: HeaderLink;
 }
 
@@ -27,6 +28,7 @@ function getNavClasses(isActive: boolean) {
 export default function SiteHeader({
   activeSection,
   cta,
+  actionLink,
   secondaryLink,
 }: SiteHeaderProps) {
   return (
@@ -62,6 +64,15 @@ export default function SiteHeader({
               className="hidden md:block text-sm font-medium text-slate-400 hover:text-white transition"
             >
               {secondaryLink.label}
+            </Link>
+          ) : null}
+
+          {actionLink ? (
+            <Link
+              href={actionLink.href}
+              className="hidden sm:inline-flex items-center rounded-full border border-slate-700 px-4 py-2 text-sm font-medium text-white transition hover:border-emerald-500 hover:text-emerald-300"
+            >
+              {actionLink.label}
             </Link>
           ) : null}
 
