@@ -10,19 +10,20 @@ interface ConsoleShellProps {
   children: ReactNode;
 }
 
-const navItems = [
-  { href: '/console', label: 'Overview' },
-  { href: '/console/chips', label: 'Chips' },
-  { href: '/console/models', label: 'Models' },
-  { href: '/console/benchmarks', label: 'Benchmarks' },
-];
-
 export default function ConsoleShell({
   session,
   title,
   description,
   children,
 }: ConsoleShellProps) {
+  const navItems = [
+    { href: '/console', label: 'Overview' },
+    { href: '/console/chips', label: 'Chips' },
+    { href: '/console/models', label: 'Models' },
+    { href: '/console/benchmarks', label: 'Benchmarks' },
+    ...(session.profile.role === 'super_admin' ? [{ href: '/console/access', label: 'Access' }] : []),
+  ];
+
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="border-b border-slate-800 bg-slate-950/90">
@@ -37,7 +38,7 @@ export default function ConsoleShell({
 
           <div className="flex items-center gap-3">
             <div className="rounded-full border border-slate-800 bg-slate-900 px-4 py-2 text-sm text-slate-300">
-              {session.profile.display_name ?? session.user.email ?? 'Console User'}
+              {session.profile.display_name ?? session.user.email ?? 'Console User'} · {session.profile.role}
             </div>
             <form action={signOutAction}>
               <button

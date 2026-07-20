@@ -21,6 +21,14 @@ export interface ConsoleSession {
   memberships: ManufacturerMembership[];
 }
 
+export function hasConsoleAccess(session: ConsoleSession) {
+  if (session.profile.role === 'super_admin') {
+    return true;
+  }
+
+  return session.profile.role === 'vendor_editor' && session.memberships.length > 0;
+}
+
 export const getConsoleSession = cache(async (): Promise<ConsoleSession | null> => {
   const supabase = await createServerSupabaseClient();
   const {
@@ -56,7 +64,7 @@ export async function requireConsoleSession() {
     redirect('/console/login');
   }
 
-  if (session.profile.role !== 'super_admin' && session.memberships.length === 0) {
+  if (!hasConsoleAccess(session)) {
     redirect('/console/login?error=Console access has not been granted for this account.');
   }
 
