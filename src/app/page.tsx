@@ -27,8 +27,8 @@ export default function Home() {
       <div className="absolute top-80 right-[12%] w-40 h-40 bg-emerald-300/10 rounded-full blur-3xl pointer-events-none animate-drift-reverse" />
 
       <SiteHeader
-        secondaryLink={{ href: '/console/login', label: 'Sign In' }}
-        actionLink={{ href: '/console/login#request-access', label: 'Create Account' }}
+        secondaryLink={{ href: '/console/login?mode=signup', label: 'Create Account' }}
+        actionLink={{ href: '/console/login', label: 'Sign In' }}
         cta={{ href: '/collections', label: 'My Collections' }}
       />
 
@@ -54,7 +54,7 @@ export default function Home() {
             so you can compare H100, MI300X, Ascend, and more at a glance.
           </p>
 
-          <div className="animate-fade-up animate-delay-3 flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+          <div className="animate-fade-up animate-delay-3 flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <Link 
               href="/chip-of-the-day"
               className="group flex items-center gap-2 px-6 py-3 bg-emerald-500 text-black rounded-full hover:bg-emerald-400 hover:shadow-[0_0_30px_rgba(52,211,153,0.35)] transition-all duration-300 font-semibold"
@@ -63,28 +63,6 @@ export default function Home() {
               <svg className="w-4 h-4 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
-            </Link>
-
-            <Link
-              href="/console/login#request-access"
-              className="group flex items-center gap-2 rounded-full border border-slate-700 px-6 py-3 text-white transition-all duration-300 hover:border-emerald-500 hover:text-emerald-300"
-            >
-              Create Account
-              <svg className="w-4 h-4 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h4m0 0v4m0-4L9 15" />
-              </svg>
-            </Link>
-          </div>
-
-          <div className="animate-fade-up animate-delay-3 mb-12 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-slate-400">
-            <span>Have an account?</span>
-            <Link href="/console/login" className="font-medium text-white transition hover:text-emerald-300">
-              Sign in to Console
-            </Link>
-            <span className="hidden sm:inline text-slate-600">|</span>
-            <span>New here?</span>
-            <Link href="/console/login#request-access" className="font-medium text-emerald-400 transition hover:text-emerald-300">
-              Create one now
             </Link>
           </div>
 
