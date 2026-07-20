@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requireConsoleSession, canManageManufacturer } from '@/lib/console-auth';
+import { requireConsoleSession, canManageManufacturer, canReviewManufacturer } from '@/lib/console-auth';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { getChipTable, isChipSource, type ManagedChipSource } from '@/lib/chip-management';
 
@@ -156,19 +156,35 @@ function buildChipPayload(
   };
 }
 
-function assertStatusTransitionAllowed(isAdmin: boolean, nextStatus: ChipLifecycleStatus) {
-  if (isAdmin) {
+function assertStatusTransitionAllowedForAuthoring(nextStatus: ChipLifecycleStatus) {
+  if (nextStatus !== 'draft' && nextStatus !== 'pending_review') {
+    throw new Error('Vendor accounts can only save drafts or submit for review.');
+  }
+}
+
+function assertCanReviewStatusTransition(
+  currentStatus: ChipLifecycleStatus,
+  nextStatus: ChipLifecycleStatus,
+  canReview: boolean
+) {
+  if (!canReview) {
+    assertStatusTransitionAllowedForAuthoring(nextStatus);
     return;
   }
 
-  if (nextStatus !== 'draft' && nextStatus !== 'pending_review') {
-    throw new Error('Vendor accounts can only save drafts or submit for review.');
+  if (currentStatus !== 'pending_review') {
+    throw new Error('Only pending review chips can be approved or sent back.');
+  }
+
+  if (nextStatus !== 'draft' && nextStatus !== 'published' && nextStatus !== 'archived') {
+    throw new Error('Review actions can publish, archive, or send a chip back to draft.');
   }
 }
 
 function revalidateChipRoutes(source: ManagedChipSource, chipId?: string) {
   revalidatePath('/console');
   revalidatePath('/console/chips');
+  revalidatePath('/console/review');
   revalidatePath('/chips');
   revalidatePath('/edge');
   revalidatePath('/benchmark/vision');
@@ -218,7 +234,9 @@ export async function saveChipAction(formData: FormData) {
       }
 
       const nextStatus = (existing.status as ChipLifecycleStatus | null) ?? 'draft';
-      assertStatusTransitionAllowed(session.profile.role === 'super_admin', nextStatus);
+      if (session.profile.role !== 'super_admin') {
+        assertStatusTransitionAllowedForAuthoring(nextStatus);
+      }
 
       const { error } = await supabase
         .from(table)
@@ -262,23 +280,38 @@ export async function changeChipStatusAction(formData: FormData) {
   const source = String(formData.get('source') ?? '');
   const chipId = String(formData.get('chip_id') ?? '');
   const nextStatus = String(formData.get('next_status') ?? '') as ChipLifecycleStatus;
+  const returnTo = asOptionalString(formData.get('return_to'));
 
   if (!isChipSource(source) || !chipId) {
     redirect('/console/chips?error=Missing chip reference.');
   }
 
   try {
-    assertStatusTransitionAllowed(session.profile.role === 'super_admin', nextStatus);
-
     const table = getChipTable(source);
     const { data: chip } = await supabase
       .from(table)
-      .select('id,manufacturer_id')
+      .select('id,manufacturer_id,status')
       .eq('id', chipId)
       .maybeSingle();
 
-    if (!chip || !canManageManufacturer(session, chip.manufacturer_id)) {
+    if (!chip) {
       throw new Error('Chip not found or access denied.');
+    }
+
+    const canManage = canManageManufacturer(session, chip.manufacturer_id);
+    const canReview = canReviewManufacturer(session, chip.manufacturer_id);
+    const currentStatus = (chip.status as ChipLifecycleStatus | null) ?? 'draft';
+
+    if (!canManage && !canReview) {
+      throw new Error('Chip not found or access denied.');
+    }
+
+    if (canManage) {
+      if (!canReview) {
+        assertStatusTransitionAllowedForAuthoring(nextStatus);
+      }
+    } else {
+      assertCanReviewStatusTransition(currentStatus, nextStatus, canReview);
     }
 
     const updatePayload: Record<string, string | null> = {
@@ -294,10 +327,10 @@ export async function changeChipStatusAction(formData: FormData) {
     }
 
     revalidateChipRoutes(source, chipId);
-    redirect(`/console/chips/${source}/${chipId}?message=Status updated to ${nextStatus}.`);
+    redirect(`${returnTo ?? `/console/chips/${source}/${chipId}`}?message=${encodeURIComponent(`Status updated to ${nextStatus}.`)}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to update status.';
-    redirect(`/console/chips/${source}/${chipId}?error=${encodeURIComponent(message)}`);
+    redirect(`${returnTo ?? `/console/chips/${source}/${chipId}`}?error=${encodeURIComponent(message)}`);
   }
 }
 

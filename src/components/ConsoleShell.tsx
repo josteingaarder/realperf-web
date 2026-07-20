@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { signOutAction } from '@/app/console/actions';
-import type { ConsoleSession } from '@/lib/console-auth';
+import { hasReviewAccess, type ConsoleSession } from '@/lib/console-auth';
 
 interface ConsoleShellProps {
   session: ConsoleSession;
@@ -21,6 +21,7 @@ export default function ConsoleShell({
     { href: '/console/chips', label: 'Chips' },
     { href: '/console/models', label: 'Models' },
     { href: '/console/benchmarks', label: 'Benchmarks' },
+    ...(hasReviewAccess(session) ? [{ href: '/console/review', label: 'Review' }] : []),
     ...(session.profile.role === 'super_admin' ? [{ href: '/console/access', label: 'Access' }] : []),
   ];
 

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import StatsCards from './StatsCards';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeaderWithAuth from '@/components/SiteHeaderWithAuth';
 
 export const metadata: Metadata = {
   title: 'RealPerf.ai - AI Chip Benchmark Database & Comparison',
@@ -26,11 +26,7 @@ export default function Home() {
       <div className="absolute top-52 left-[10%] w-32 h-32 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none animate-float-slower" />
       <div className="absolute top-80 right-[12%] w-40 h-40 bg-emerald-300/10 rounded-full blur-3xl pointer-events-none animate-drift-reverse" />
 
-      <SiteHeader
-        secondaryLink={{ href: '/console/login?mode=signup', label: 'Create Account' }}
-        actionLink={{ href: '/console/login', label: 'Sign In' }}
-        cta={{ href: '/collections', label: 'My Collections' }}
-      />
+      <SiteHeaderWithAuth cta={{ href: '/collections', label: 'My Collections' }} />
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-6">

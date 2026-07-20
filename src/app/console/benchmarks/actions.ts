@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { canManageManufacturer, requireConsoleSession } from '@/lib/console-auth';
+import { canManageManufacturer, canReviewManufacturer, requireConsoleSession } from '@/lib/console-auth';
 import { fetchBenchmarkChipOptions, slugify, type BenchmarkChipOption } from '@/lib/benchmark-management';
 import {
   parseBenchmarkImportCsv,
@@ -55,6 +55,7 @@ function revalidateBenchmarkRoutes(resultId?: string, chipSource?: 'cloud' | 'ed
   revalidatePath('/console');
   revalidatePath('/console/benchmarks');
   revalidatePath('/console/models');
+  revalidatePath('/console/review');
 
   if (resultId) {
     revalidatePath(`/console/benchmarks/${resultId}`);
@@ -65,13 +66,28 @@ function revalidateBenchmarkRoutes(resultId?: string, chipSource?: 'cloud' | 'ed
   }
 }
 
-function assertStatusTransitionAllowed(isAdmin: boolean, nextStatus: BenchmarkLifecycleStatus) {
-  if (isAdmin) {
+function assertStatusTransitionAllowedForAuthoring(nextStatus: BenchmarkLifecycleStatus) {
+  if (nextStatus !== 'draft' && nextStatus !== 'pending_review') {
+    throw new Error('Vendor accounts can only save drafts or submit for review.');
+  }
+}
+
+function assertCanReviewStatusTransition(
+  currentStatus: BenchmarkLifecycleStatus,
+  nextStatus: BenchmarkLifecycleStatus,
+  canReview: boolean
+) {
+  if (!canReview) {
+    assertStatusTransitionAllowedForAuthoring(nextStatus);
     return;
   }
 
-  if (nextStatus !== 'draft' && nextStatus !== 'pending_review') {
-    throw new Error('Vendor accounts can only save drafts or submit for review.');
+  if (currentStatus !== 'pending_review') {
+    throw new Error('Only pending review benchmark entries can be approved or sent back.');
+  }
+
+  if (nextStatus !== 'draft' && nextStatus !== 'published' && nextStatus !== 'archived') {
+    throw new Error('Review actions can publish, archive, or send a benchmark entry back to draft.');
   }
 }
 
@@ -551,10 +567,7 @@ async function upsertBenchmarkEvidence(
   }
 }
 
-function normalizeImportStatus(
-  rawStatus: string,
-  isAdmin: boolean
-): BenchmarkLifecycleStatus {
+function normalizeImportStatus(rawStatus: string): BenchmarkLifecycleStatus {
   const normalized = (rawStatus.trim().toLowerCase() || 'draft') as BenchmarkLifecycleStatus;
   const supportedStatuses: BenchmarkLifecycleStatus[] = ['draft', 'pending_review', 'published', 'archived'];
 
@@ -562,7 +575,7 @@ function normalizeImportStatus(
     throw new Error(`Unsupported status: ${rawStatus}`);
   }
 
-  assertStatusTransitionAllowed(isAdmin, normalized);
+  assertStatusTransitionAllowedForAuthoring(normalized);
   return normalized;
 }
 
@@ -643,11 +656,10 @@ export async function importBenchmarksAction(formData: FormData) {
     const rows = parseBenchmarkImportCsv(csvText);
     const chipOptions = await fetchBenchmarkChipOptions(session);
     const chipMaps = buildChipLookupMaps(chipOptions);
-    const actorIsAdmin = session.profile.role === 'super_admin';
 
     const prevalidatedRows = rows.map((row: ParsedBenchmarkImportRow) => {
       const chip = resolveImportChip(row, chipMaps);
-      const status = normalizeImportStatus(row.status, actorIsAdmin);
+      const status = normalizeImportStatus(row.status);
       return {
         row,
         chip,
@@ -865,7 +877,9 @@ export async function saveBenchmarkAction(formData: FormData) {
       }
 
       const nextStatus = (existing.status as BenchmarkLifecycleStatus | null) ?? 'draft';
-      assertStatusTransitionAllowed(session.profile.role === 'super_admin', nextStatus);
+      if (session.profile.role !== 'super_admin') {
+        assertStatusTransitionAllowedForAuthoring(nextStatus);
+      }
 
       const { error } = await supabase
         .from('benchmark_results')
@@ -942,22 +956,37 @@ export async function changeBenchmarkStatusAction(formData: FormData) {
   const supabase = await createServerSupabaseClient();
   const resultId = String(formData.get('benchmark_result_id') ?? '');
   const nextStatus = String(formData.get('next_status') ?? '') as BenchmarkLifecycleStatus;
+  const returnTo = asOptionalString(formData.get('return_to'));
 
   if (!resultId) {
     redirect('/console/benchmarks?error=Missing benchmark result reference.');
   }
 
   try {
-    assertStatusTransitionAllowed(session.profile.role === 'super_admin', nextStatus);
-
     const { data: existing } = await supabase
       .from('benchmark_results')
-      .select('id,manufacturer_id,chip_source,chip_id')
+      .select('id,manufacturer_id,chip_source,chip_id,status')
       .eq('id', resultId)
       .maybeSingle();
 
-    if (!existing || !canManageManufacturer(session, existing.manufacturer_id)) {
+    if (!existing) {
       throw new Error('Benchmark result not found or access denied.');
+    }
+
+    const canManage = canManageManufacturer(session, existing.manufacturer_id);
+    const canReview = canReviewManufacturer(session, existing.manufacturer_id);
+    const currentStatus = (existing.status as BenchmarkLifecycleStatus | null) ?? 'draft';
+
+    if (!canManage && !canReview) {
+      throw new Error('Benchmark result not found or access denied.');
+    }
+
+    if (canManage) {
+      if (!canReview) {
+        assertStatusTransitionAllowedForAuthoring(nextStatus);
+      }
+    } else {
+      assertCanReviewStatusTransition(currentStatus, nextStatus, canReview);
     }
 
     const { error } = await supabase
@@ -975,10 +1004,14 @@ export async function changeBenchmarkStatusAction(formData: FormData) {
     }
 
     revalidateBenchmarkRoutes(resultId, existing.chip_source, existing.chip_id);
-    redirect(`/console/benchmarks/${resultId}?message=Benchmark status updated to ${nextStatus}.`);
+    redirect(
+      `${returnTo ?? `/console/benchmarks/${resultId}`}?message=${encodeURIComponent(
+        `Benchmark status updated to ${nextStatus}.`
+      )}`
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to update benchmark status.';
-    redirect(`/console/benchmarks/${resultId}?error=${encodeURIComponent(message)}`);
+    redirect(`${returnTo ?? `/console/benchmarks/${resultId}`}?error=${encodeURIComponent(message)}`);
   }
 }
 

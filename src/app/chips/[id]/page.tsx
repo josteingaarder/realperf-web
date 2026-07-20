@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeaderWithAuth from '@/components/SiteHeaderWithAuth';
 import { serializeCompareItems } from '@/lib/storage';
 import ChipBenchmarkPanel from '@/components/ChipBenchmarkPanel';
 import { fetchPublicBenchmarkRowsForChip } from '@/lib/public-benchmarks';
@@ -73,7 +73,7 @@ export default async function ChipDetailPage(props: { params: Promise<{ id: stri
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <SiteHeader activeSection="cloud" secondaryLink={{ href: '/chips', label: 'Back to List' }} />
+      <SiteHeaderWithAuth activeSection="cloud" secondaryLink={{ href: '/chips', label: 'Back to List' }} />
 
       <div className="max-w-5xl mx-auto px-6 py-12">
         {/* 头部 */}

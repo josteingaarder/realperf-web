@@ -1,14 +1,15 @@
 import { Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import EdgeChipFilter from './EdgeChipFilter';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeaderWithAuth from '@/components/SiteHeaderWithAuth';
+import { fetchFavoriteRefsForCurrentUser, getCollectionViewer } from '@/lib/account-collections';
 
 export default async function EdgePage() {
-  const { data: chips, error } = await supabase
-    .from('edge_chips')
-    .select('*')
-    .eq('status', 'published')
-    .order('ai_tops', { ascending: false });
+  const [{ data: chips, error }, favorites, viewer] = await Promise.all([
+    supabase.from('edge_chips').select('*').eq('status', 'published').order('ai_tops', { ascending: false }),
+    fetchFavoriteRefsForCurrentUser(),
+    getCollectionViewer(),
+  ]);
 
   if (error || !chips) {
     return (
@@ -20,7 +21,7 @@ export default async function EdgePage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <SiteHeader
+      <SiteHeaderWithAuth
         activeSection="edge"
         cta={{ href: '/collections', label: 'My Collections' }}
       />
@@ -32,7 +33,7 @@ export default async function EdgePage() {
         </div>
 
         <Suspense fallback={<div className="text-slate-500">Loading edge chips...</div>}>
-          <EdgeChipFilter chips={chips} />
+          <EdgeChipFilter chips={chips} initialFavorites={favorites} canSaveCollections={Boolean(viewer)} />
         </Suspense>
       </div>
     </main>

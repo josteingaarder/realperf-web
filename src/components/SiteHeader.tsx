@@ -1,8 +1,8 @@
 import Link from 'next/link';
 
-type NavSection = 'cloud' | 'edge' | 'collections';
+export type NavSection = 'cloud' | 'edge' | 'collections';
 
-interface HeaderLink {
+export interface HeaderLink {
   href: string;
   label: string;
 }

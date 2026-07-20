@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeaderWithAuth from '@/components/SiteHeaderWithAuth';
 import type { ArchitectureSource } from '@/lib/architecture';
 import { fetchArchitectureProfile } from '@/lib/architecture';
 
@@ -35,7 +35,7 @@ export default async function ArchitectureDetailPage({
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <SiteHeader
+      <SiteHeaderWithAuth
         activeSection={source}
         secondaryLink={{ href: '/architecture', label: 'Back to Architecture' }}
         cta={{ href: '/collections', label: 'My Collections' }}

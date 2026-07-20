@@ -26,6 +26,11 @@ export async function GET(request: NextRequest) {
     redirectUrl.searchParams.set('message', 'Email verified. Sign in after your console access is approved.');
   }
 
+  if (type === 'public-signup') {
+    redirectUrl.pathname = '/sign-in';
+    redirectUrl.searchParams.set('message', 'Email verified. You can now sign in.');
+  }
+
   if (type === 'recovery') {
     redirectUrl.pathname = '/console/reset-password';
     redirectUrl.searchParams.delete('message');

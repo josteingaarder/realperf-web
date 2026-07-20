@@ -29,6 +29,14 @@ export function hasConsoleAccess(session: ConsoleSession) {
   return session.profile.role === 'vendor_editor' && session.memberships.length > 0;
 }
 
+export function hasReviewAccess(session: ConsoleSession) {
+  if (session.profile.role === 'super_admin') {
+    return true;
+  }
+
+  return session.memberships.some((membership) => membership.role === 'reviewer');
+}
+
 export const getConsoleSession = cache(async (): Promise<ConsoleSession | null> => {
   const supabase = await createServerSupabaseClient();
   const {
@@ -84,5 +92,19 @@ export function canManageManufacturer(session: ConsoleSession, manufacturerId: s
     (membership) =>
       membership.manufacturer_id === manufacturerId &&
       (membership.role === 'owner' || membership.role === 'editor')
+  );
+}
+
+export function canReviewManufacturer(session: ConsoleSession, manufacturerId: string | null | undefined) {
+  if (!manufacturerId) {
+    return false;
+  }
+
+  if (session.profile.role === 'super_admin') {
+    return true;
+  }
+
+  return session.memberships.some(
+    (membership) => membership.manufacturer_id === manufacturerId && membership.role === 'reviewer'
   );
 }

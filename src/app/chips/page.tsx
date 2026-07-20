@@ -1,14 +1,15 @@
 import { Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import ChipFilter from './ChipFilter';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeaderWithAuth from '@/components/SiteHeaderWithAuth';
+import { fetchFavoriteRefsForCurrentUser, getCollectionViewer } from '@/lib/account-collections';
 
 export default async function ChipsPage() {
-  const { data: chips, error } = await supabase
-    .from('cloud_chips')
-    .select('*')
-    .eq('status', 'published')
-    .order('fp16_tflops', { ascending: false });
+  const [{ data: chips, error }, favorites, viewer] = await Promise.all([
+    supabase.from('cloud_chips').select('*').eq('status', 'published').order('fp16_tflops', { ascending: false }),
+    fetchFavoriteRefsForCurrentUser(),
+    getCollectionViewer(),
+  ]);
 
   if (error || !chips) {
     return (
@@ -20,7 +21,7 @@ export default async function ChipsPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <SiteHeader
+      <SiteHeaderWithAuth
         activeSection="cloud"
         cta={{ href: '/collections', label: 'My Collections' }}
       />
@@ -32,7 +33,7 @@ export default async function ChipsPage() {
         </div>
         
         <Suspense fallback={<div className="text-slate-500">Loading chip filters...</div>}>
-          <ChipFilter chips={chips} />
+          <ChipFilter chips={chips} initialFavorites={favorites} canSaveCollections={Boolean(viewer)} />
         </Suspense>
       </div>
     </main>

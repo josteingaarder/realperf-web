@@ -1,16 +1,16 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import ReactECharts from 'echarts-for-react';
 import SiteHeader from '@/components/SiteHeader';
 import { fetchCompareChips, getSourceLabel, type CompareChip } from '@/lib/catalog';
 import {
   parseCompareItems,
-  saveComparison,
   serializeCompareItems,
 } from '@/lib/storage';
+import { saveComparisonAction } from '@/app/collections/actions';
 
 function getPrimaryMetric(chip: CompareChip) {
   if (chip.source === 'edge') {
@@ -38,7 +38,7 @@ function formatValue(value: number | string | null | undefined, suffix = '') {
   return `${value}${suffix}`;
 }
 
-export default function CompareContent() {
+export default function CompareContent({ canSaveCollections }: { canSaveCollections: boolean }) {
   const searchParams = useSearchParams();
   const compareItems = useMemo(
     () => parseCompareItems(searchParams.get('items'), searchParams.get('ids')),
@@ -50,6 +50,7 @@ export default function CompareContent() {
     chips: [],
   });
   const [savedMsg, setSavedMsg] = useState('');
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     if (compareItems.length < 2) return;
@@ -64,10 +65,29 @@ export default function CompareContent() {
 
   const handleSave = () => {
     if (chips.length < 2) return;
+    if (!canSaveCollections) {
+      window.location.href = '/sign-in?message=' + encodeURIComponent('Sign in to save comparisons.');
+      return;
+    }
+
     const names = chips.map((chip) => chip.name);
-    saveComparison(compareItems, names);
-    setSavedMsg('Comparison saved to My Collections!');
-    setTimeout(() => setSavedMsg(''), 3000);
+
+    startTransition(() => {
+      saveComparisonAction(compareItems, names).then((result) => {
+        if (!result.ok) {
+          if (result.code === 'AUTH_REQUIRED') {
+            window.location.href = '/sign-in?message=' + encodeURIComponent('Sign in to save comparisons.');
+            return;
+          }
+
+          window.alert(result.message);
+          return;
+        }
+
+        setSavedMsg('Comparison saved to My Collections!');
+        setTimeout(() => setSavedMsg(''), 3000);
+      });
+    });
   };
 
   const hasMixedSources = new Set(chips.map((chip) => chip.source)).size > 1;

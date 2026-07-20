@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeaderWithAuth from '@/components/SiteHeaderWithAuth';
 import { supabase } from '@/lib/supabase';
 import { serializeCompareItems } from '@/lib/storage';
 
@@ -33,7 +33,7 @@ export default async function ChipOfTheDayPage() {
   if (error || !chips || chips.length === 0) {
     return (
       <main className="min-h-screen bg-black text-white">
-        <SiteHeader cta={{ href: '/collections', label: 'My Collections' }} />
+        <SiteHeaderWithAuth cta={{ href: '/collections', label: 'My Collections' }} />
         <div className="flex items-center justify-center px-6 py-24">
           <div className="text-center">
             <h1 className="text-3xl font-bold mb-4">Chip of the Day is unavailable</h1>
@@ -64,7 +64,7 @@ export default async function ChipOfTheDayPage() {
     <main className="min-h-screen bg-black text-white relative overflow-hidden">
       <div className="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[860px] h-[420px] bg-emerald-500/15 rounded-full blur-[140px] pointer-events-none" />
 
-      <SiteHeader cta={{ href: '/collections', label: 'My Collections' }} />
+      <SiteHeaderWithAuth cta={{ href: '/collections', label: 'My Collections' }} />
 
       <section className="relative px-6 pt-24 pb-14">
         <div className="max-w-6xl mx-auto">

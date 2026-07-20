@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeaderWithAuth from '@/components/SiteHeaderWithAuth';
 import BenchmarkResultsExplorer from '@/app/benchmark/BenchmarkResultsExplorer';
 import { fetchPublicBenchmarkRows, type BenchmarkCategory } from '@/lib/public-benchmarks';
 
@@ -55,7 +55,7 @@ export default async function BenchmarkCategoryPage({
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <SiteHeader
+      <SiteHeaderWithAuth
         cta={{ href: '/collections', label: 'My Collections' }}
         secondaryLink={{ href: '/', label: 'Back to Home' }}
       />

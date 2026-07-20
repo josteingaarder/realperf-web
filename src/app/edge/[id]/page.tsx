@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeaderWithAuth from '@/components/SiteHeaderWithAuth';
 import { supabase } from '@/lib/supabase';
 import { serializeCompareItems } from '@/lib/storage';
 import ChipBenchmarkPanel from '@/components/ChipBenchmarkPanel';
@@ -69,7 +69,7 @@ export default async function EdgeChipDetailPage(
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <SiteHeader activeSection="edge" secondaryLink={{ href: '/edge', label: 'Back to List' }} />
+      <SiteHeaderWithAuth activeSection="edge" secondaryLink={{ href: '/edge', label: 'Back to List' }} />
 
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="mb-10">

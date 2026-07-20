@@ -1,14 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   buildCompareHref,
-  getFavorites,
   parseCompareItems,
-  toggleFavorite,
+  type StoredChipRef,
 } from '@/lib/storage';
+import { toggleFavoriteAction } from '@/app/collections/actions';
 
 interface EdgeChip {
   id: string;
@@ -22,7 +22,15 @@ interface EdgeChip {
   price_usd: number;
 }
 
-export default function EdgeChipFilter({ chips }: { chips: EdgeChip[] }) {
+export default function EdgeChipFilter({
+  chips,
+  initialFavorites,
+  canSaveCollections,
+}: {
+  chips: EdgeChip[];
+  initialFavorites: StoredChipRef[];
+  canSaveCollections: boolean;
+}) {
   const searchParams = useSearchParams();
   const initialSelectedIds = useMemo(
     () =>
@@ -35,7 +43,8 @@ export default function EdgeChipFilter({ chips }: { chips: EdgeChip[] }) {
   const [search, setSearch] = useState('');
   const [manufacturer, setManufacturer] = useState('All');
   const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
-  const [favorites, setFavorites] = useState(getFavorites());
+  const [favorites, setFavorites] = useState<StoredChipRef[]>(initialFavorites);
+  const [, startTransition] = useTransition();
   const router = useRouter();
 
   const manufacturers = useMemo(() => 
@@ -65,8 +74,33 @@ export default function EdgeChipFilter({ chips }: { chips: EdgeChip[] }) {
   };
 
   const handleToggleFavorite = (id: string) => {
-    toggleFavorite({ id, source: 'edge' });
-    setFavorites(getFavorites());
+    if (!canSaveCollections) {
+      router.push('/sign-in?message=' + encodeURIComponent('Sign in to save favorite chips.'));
+      return;
+    }
+
+    const item: StoredChipRef = { id, source: 'edge' };
+    const wasFavorite = favorites.some((favorite) => favorite.id === id && favorite.source === 'edge');
+    const nextFavorites = wasFavorite
+      ? favorites.filter((favorite) => !(favorite.id === id && favorite.source === 'edge'))
+      : [...favorites, item];
+
+    setFavorites(nextFavorites);
+
+    startTransition(() => {
+      toggleFavoriteAction(item).then((result) => {
+        if (!result.ok) {
+          setFavorites(favorites);
+
+          if (result.code === 'AUTH_REQUIRED') {
+            router.push('/sign-in?message=' + encodeURIComponent('Sign in to save favorite chips.'));
+            return;
+          }
+
+          window.alert(result.message);
+        }
+      });
+    });
   };
 
   const handleCompare = () => {
